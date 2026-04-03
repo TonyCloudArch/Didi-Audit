@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Compilados de Frontend
+dist/
+dist-ssr/
+build/
+
+# Variables de Entorno (¡CRÍTICO!)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Archivos del Sistema Operativo
+.DS_Store
+Thumbs.db
+
+# Volumen de Base de Datos y Temporales
+/backend/uploads/
+*.sqlite
+*.sql.gz

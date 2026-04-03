@@ -1,0 +1,143 @@
+:root {
+  --didi-orange: #ff8d00;
+  --didi-orange-hover: #e67e00;
+  --bg-dark: #121212;
+  --bg-card: #1e1e1e;
+  --bg-input: #2a2a2a;
+  --text-main: #ffffff;
+  --text-muted: #a0a0a0;
+  --success-green: #00d166;
+  --error-red: #ff4d4d;
+  --border-radius: 12px;
+  --safe-area-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Roboto', sans-serif;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.mobile-container {
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 20px;
+  padding-bottom: calc(80px + var(--safe-area-bottom));
+}
+
+/* 📱 Header DiDi Style */
+.header {
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(26,26,26,1) 0%, rgba(18,18,18,0) 100%);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--didi-orange);
+}
+
+/* 💳 Cards */
+.card {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.card-title {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.card-value {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* 🔘 Buttons */
+.btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--border-radius);
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background-color: var(--didi-orange);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--bg-input);
+  color: white;
+}
+
+.btn-danger {
+  background-color: var(--error-red);
+  color: white;
+}
+
+/* 🚦 Traffic Light */
+.indicator-green { color: var(--success-green); }
+.indicator-red { color: var(--error-red); }
+
+/* 🧭 Navigation Bar */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #1a1a1a;
+  padding: 10px 20px calc(10px + var(--safe-area-bottom));
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid #333;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.nav-item.active {
+  color: var(--didi-orange);
+}
