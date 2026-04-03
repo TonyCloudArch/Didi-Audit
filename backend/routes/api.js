@@ -29,7 +29,7 @@ router.post('/shifts/open', async (req, res) => {
 // 📸 2. Cargar Imágenes en Lote (Magic Reader Batch)
 router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
   if (!req.files || req.files.length === 0) return res.status(400).send('No images uploaded');
-  
+
   try {
     // Buscar o auto-crear turno si no hay uno
     const [activeShift] = await db.execute('SELECT id FROM shifts WHERE status = "OPEN" ORDER BY id DESC LIMIT 1');
@@ -48,11 +48,11 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
     for (let i = 0; i < req.files.length; i += 2) {
       try {
         const paths = [req.files[i].path];
-        if (req.files[i+1]) paths.push(req.files[i+1].path);
+        if (req.files[i + 1]) paths.push(req.files[i + 1].path);
 
         // 1. IA extrae datos del par de imágenes
         const aiData = await parseDidiReport(paths);
-        
+
         // 2. Guardar en BD
         await db.execute(
           `INSERT INTO entries (
@@ -83,16 +83,16 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         console.error("Error en par iterativo:", err.message);
         fallbackError = err.message; // Guardamos el error pero seguimos o detenemos según severidad
         // Si es 429 Too Many Requests (Rate limit de OpenAI), no tiene sentido seguir
-        if(err.message.includes("429") || err.message.includes("Rate limit") || err.message.includes("Insufficient quota")) {
+        if (err.message.includes("429") || err.message.includes("Rate limit") || err.message.includes("Insufficient quota")) {
           break;
         }
       }
     }
 
     if (viajesProcesados > 0) {
-       res.json({ success: true, viajesProcesados, errorWarning: fallbackError });
+      res.json({ success: true, viajesProcesados, errorWarning: fallbackError });
     } else {
-       res.status(500).json({ error: fallbackError || "Error desconocido procesando Lote" });
+      res.status(500).json({ error: fallbackError || "Error desconocido procesando Lote" });
     }
 
   } catch (err) {
@@ -152,7 +152,7 @@ router.get('/history', async (req, res) => {
     if (period === 'day') dateFilter = 'DATE(created_at) = CURDATE()';
     else if (period === 'week') dateFilter = 'YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)';
     else if (period === 'month') dateFilter = 'MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())';
-    
+
     // Si no pasan 'period', se traen los últimos 50 viajes.
     const query = `
       SELECT id, pasajero, distancia_didi_km, ganancia_neta_final, roi_km, calificacion_seleccion, created_at 
@@ -178,14 +178,14 @@ router.get('/dashboard', async (req, res) => {
       FROM entries 
       WHERE DATE(created_at) = CURDATE()
     `);
-    
+
     // Asumimos un Shift siempre abierto para evitar romper si no hay uno
     const [shiftData] = await db.execute('SELECT initial_odometer FROM shifts ORDER BY id DESC LIMIT 1');
     // odometerDiff = KM DiDi recorridos hoy (lo que sí pagaron)
     const totalKmDidi = Number(stats[0].total_km || 0);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       currentDisposition: stats[0].currentDisposition || 0,
       roi: stats[0].roiPromedio || 0,
       totalKmDidi: totalKmDidi
