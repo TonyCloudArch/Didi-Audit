@@ -119,18 +119,19 @@ router.post('/expenses', async (req, res) => {
 router.post('/shifts/close', async (req, res) => {
   const { shift_id, final_odometer, final_cash_counted } = req.body;
   try {
-    // Calcular totales de DiDi en efectivo para este turno
-    const [entries] = await db.execute('SELECT SUM(amount_gross) as total_cash FROM entries WHERE shift_id = ? AND is_cash = 1', [shift_id]);
+    // Calcular totales usando columnas reales de la tabla entries
+    const [entries] = await db.execute('SELECT SUM(ganancia_neta_final) as total_neto, SUM(distancia_didi_km) as total_km FROM entries WHERE shift_id = ?', [shift_id]);
     const [expenses] = await db.execute('SELECT SUM(amount) as total_exp FROM expenses WHERE shift_id = ?', [shift_id]);
-    const [shift] = await db.execute('SELECT initial_cash FROM shifts WHERE id = ?', [shift_id]);
+    const [shift] = await db.execute('SELECT initial_cash, initial_odometer FROM shifts WHERE id = ?', [shift_id]);
 
-    const expectedCash = (shift[0].initial_cash + (entries[0].total_cash || 0)) - (expenses[0].total_exp || 0);
+    const totalNeto = Number(entries[0].total_neto || 0);
+    const totalExp = Number(expenses[0].total_exp || 0);
+    const expectedCash = shift[0].initial_cash + totalNeto - totalExp;
     const difference = final_cash_counted - expectedCash;
 
-    // Determinar Semáforo (Basado en $/km si es > 8 MXN/km)
-    const dist = final_odometer - (await db.execute('SELECT initial_odometer FROM shifts WHERE id = ?', [shift_id]))[0][0].initial_odometer;
-    const profit = entries[0].total_cash || 0; // Simplificado para el ejemplo
-    const indicator = (profit / dist) >= 8 ? 'GREEN' : 'RED';
+    // Semáforo: ROI sobre distancia total del turno
+    const dist = final_odometer - shift[0].initial_odometer;
+    const indicator = dist > 0 && (totalNeto / dist) >= 8 ? 'GREEN' : 'RED';
 
     await db.execute(
       'UPDATE shifts SET end_time = NOW(), final_odometer = ?, final_cash_counted = ?, settlement_difference = ?, status = "CLOSED", profit_indicator = ? WHERE id = ?',
@@ -180,16 +181,14 @@ router.get('/dashboard', async (req, res) => {
     
     // Asumimos un Shift siempre abierto para evitar romper si no hay uno
     const [shiftData] = await db.execute('SELECT initial_odometer FROM shifts ORDER BY id DESC LIMIT 1');
-    const initialOdo = Number(shiftData[0]?.initial_odometer || 195258);
-    const totalKm = Number(stats[0].total_km || 0);
-    const currentOdo = initialOdo + totalKm;
-    const odometerDiff = currentOdo - initialOdo;
+    // odometerDiff = KM DiDi recorridos hoy (lo que sí pagaron)
+    const totalKmDidi = Number(stats[0].total_km || 0);
 
     res.json({ 
       success: true, 
       currentDisposition: stats[0].currentDisposition || 0,
-       roi: stats[0].roiPromedio || 0,
-       odometerDiff: odometerDiff || 0 
+      roi: stats[0].roiPromedio || 0,
+      totalKmDidi: totalKmDidi
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

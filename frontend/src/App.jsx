@@ -4,7 +4,7 @@ import { LayoutDashboard, Camera, History, User, Settings, Play, Square, AlertCi
 
 // 📊 Dashboard Component
 const Dashboard = () => {
-  const [stats, setStats] = useState({ currentDisposition: 0, roi: 0, odometerDiff: 0 });
+  const [stats, setStats] = useState({ currentDisposition: 0, roi: 0, totalKmDidi: 0 });
   const [loading, setLoading] = useState(true);
   const dailyGoal = 572.00;
 
@@ -12,13 +12,13 @@ const Dashboard = () => {
     fetch('http://localhost:3001/api/dashboard')
       .then(r => r.json())
       .then(d => {
-        if(d.success) setStats({ currentDisposition: Number(d.currentDisposition), roi: Number(d.roi), odometerDiff: Number(d.odometerDiff) });
+        if(d.success) setStats({ currentDisposition: Number(d.currentDisposition), roi: Number(d.roi), totalKmDidi: Number(d.totalKmDidi) });
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  const { currentDisposition, roi, odometerDiff } = stats;
+  const { currentDisposition, roi, totalKmDidi } = stats;
 
   return (
     <div className="mobile-container">
@@ -49,23 +49,23 @@ const Dashboard = () => {
           </div>
         </div>
         <div style={{textAlign: 'right'}}>
-          <span style={{backgroundColor: 'rgba(0, 209, 102, 0.1)', color: 'var(--success-green)', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold'}}>
-            EXCELENTE
+          <span style={{backgroundColor: roi >= 18 ? 'rgba(0,209,102,0.15)' : roi >= 12 ? 'rgba(0,209,102,0.1)' : 'rgba(255,100,0,0.1)', color: roi >= 12 ? 'var(--success-green)' : 'var(--didi-orange)', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold'}}>
+            {roi >= 18 ? 'SÚPER ÉLITE' : roi >= 12 ? 'EXCELENTE' : roi >= 8 ? 'META' : 'INEFICIENTE'}
           </span>
         </div>
       </div>
 
-      {/* ⚠️ Anomalías (KM Muertos) */}
-      <div className="card" style={{borderColor: odometerDiff > 20 ? 'var(--error-red)' : 'transparent', borderWidth: '1px', borderStyle: 'solid'}}>
+      {/* ⚠️ KM DiDi del Día */}
+      <div className="card" style={{borderColor: totalKmDidi > 0 ? 'transparent' : '#333', borderWidth: '1px', borderStyle: 'solid'}}>
         <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
-          <AlertCircle size={20} color={odometerDiff > 20 ? 'var(--error-red)' : 'var(--text-muted)'} />
+          <AlertCircle size={20} color={'var(--text-muted)'} />
           <div>
-            <div className="card-title" style={{marginBottom: '0'}}>Anomalía de Movilidad</div>
-            <div style={{fontSize: '18px', fontWeight: 'bold'}}>{Number(odometerDiff).toFixed(1)} km Muertos</div>
+            <div className="card-title" style={{marginBottom: '0'}}>Km DiDi Recorridos Hoy</div>
+            <div style={{fontSize: '18px', fontWeight: 'bold'}}>{Number(totalKmDidi).toFixed(1)} km</div>
           </div>
         </div>
         <p style={{fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px'}}>
-          Estos KM no pagaron "Cubo de Vida". Revisa traslados personales.
+          Total de km registrados en viajes de DiDi este día.
         </p>
       </div>
 
@@ -169,7 +169,7 @@ const HistoryView = () => {
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/history?period=${period}`);
+        const res = await fetch(`http://localhost:3001/api/history?period=${period}`);
         const data = await res.json();
         if (data.success) {
           setEntries(data.entries);
