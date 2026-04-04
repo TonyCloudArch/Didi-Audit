@@ -289,26 +289,32 @@ router.get('/history', async (req, res) => {
 
 // 📊 6. Datos del Dashboard (Resumen del Día)
 router.get('/dashboard', async (req, res) => {
+  const queryDate = req.query.date; // YYYY-MM-DD
   try {
+    // ⏰ Destino: Mazatlán (GMT-7)
+    // Si no hay fecha en el query, calculamos la fecha actual en Mazatlán desde el servidor
+    const targetDate = queryDate || new Date(new Date().getTime() - 7 * 3600 * 1000).toISOString().split('T')[0];
+
     const [stats] = await db.execute(`
       SELECT 
         COALESCE(SUM(ganancias_desp_imp), 0) as currentDisposition,
         COALESCE(SUM(ganancia_real), 0) as utilidadReal,
-        COALESCE(SUM(ganancias_desp_imp) - SUM(ganancia_real), 0) as gastoGasolina,
+        (COALESCE(SUM(ganancias_desp_imp), 0) - COALESCE(SUM(ganancia_real), 0)) as gastoGasolina,
         COALESCE(AVG(roi_km), 0) as roiPromedio,
         COALESCE(SUM(distancia), 0) as total_km
       FROM entries 
-      WHERE DATE(created_at) = CURDATE()
-    `);
+      WHERE DATE(CONVERT_TZ(created_at, "+00:00", "-07:00")) = ? 
+         OR DATE(fecha_hora_viaje) = ?
+    `, [targetDate, targetDate]);
 
-    const result = stats[0];
+    const result = stats[0] || {};
     res.json({
       success: true,
-      currentDisposition: Number(result.currentDisposition),
-      utilidadReal: Number(result.utilidadReal),
-      gastoGasolina: Number(result.gastoGasolina),
-      roi: Number(result.roiPromedio),
-      totalKmDidi: Number(result.total_km)
+      currentDisposition: Number(result.currentDisposition || 0),
+      utilidadReal: Number(result.utilidadReal || 0),
+      gastoGasolina: Number(result.gastoGasolina || 0),
+      roi: Number(result.roiPromedio || 0),
+      totalKmDidi: Number(result.total_km || 0)
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

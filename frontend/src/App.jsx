@@ -6,31 +6,43 @@ import { LayoutDashboard, Camera, History, Settings, AlertCircle, CreditCard, Fu
 const Dashboard = () => {
   const [stats, setStats] = useState({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0 });
   const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
   const dailyGoal = 500.00;
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/dashboard')
+    setLoading(true);
+    // 🧹 Limpieza de seguridad: resetear stats para que no se queden datos del día anterior
+    setStats({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0 });
+    fetch(`http://localhost:3001/api/dashboard?date=${date}`)
       .then(r => r.json())
       .then(d => {
         if (d.success) setStats({ 
-          currentDisposition: Number(d.currentDisposition), 
-          utilidadReal: Number(d.utilidadReal),
-          gastoGasolina: Number(d.gastoGasolina),
-          roi: Number(d.roi), 
-          totalKmDidi: Number(d.totalKmDidi) 
+          currentDisposition: Number(d.currentDisposition || 0), 
+          utilidadReal: Number(d.utilidadReal || 0),
+          gastoGasolina: Number(d.gastoGasolina || 0),
+          roi: Number(d.roi || 0), 
+          totalKmDidi: Number(d.totalKmDidi || 0) 
         });
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [date]);
 
   const { currentDisposition, utilidadReal, gastoGasolina, roi, totalKmDidi } = stats;
 
   return (
     <div className="mobile-container">
-      <div className="header">
-        <h1>Mazatlán Audit Pro</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Dodge Attitude 2019 • 195k km</p>
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1>Mazatlán Audit Pro</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Dodge Attitude 2019 • 195k km</p>
+        </div>
+        <input 
+          type="date" 
+          value={date} 
+          onChange={(e) => setDate(e.target.value)}
+          style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
+        />
       </div>
 
       {/* 🏁 Meta Diaria (Cubo de Disposición) */}
