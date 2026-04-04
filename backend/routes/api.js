@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const db = require('../config/db');
-const { parseDidiReport } = require('../services/ai');
+const { parseDidiReport, parseFuelReceipt } = require('../services/ai');
 
 // Configuración de Multer para fotos
 const storage = multer.diskStorage({
@@ -12,8 +12,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ⛽️ Configuración de Costos (Dodge Attitude 2019 • Mazatlán)
-const GAS_COST_PER_KM = 1.40; 
 
 // 🎬 1. Iniciar Turno (Apertura)
 router.post('/shifts/open', async (req, res) => {
@@ -55,12 +53,22 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
 
         // 1. IA extrae datos del par de imágenes
         const aiData = await parseDidiReport(paths);
+        
+        // 🛡️ Filtro de Seguridad: Solo procesar viajes auténticos
+        if (aiData.is_valid_didi_ride === false) {
+          console.warn('⚠️ Imagen ignorada: No se detectó un resumen de viaje de DiDi válido.');
+          continue;
+        }
 
         // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática real en el Servidor)
         const d = Number(aiData.distancia) || 0;
         const n = Number(aiData.ganancias_desp_imp) || 0;
         const roi = d > 0 ? (n / d) : 0;
-        const profitReal = n - (d * GAS_COST_PER_KM);
+        
+        // ⛽️ Costo dinámico: toma el más reciente de fuel_receipts
+        const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
+        const gasCostPerKm = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27; // fallback si no hay ticket aún
+        const profitReal = n - (d * gasCostPerKm);
         
         // El Juez Mazatleco decide:
         let calificacion = "Ineficiente";
@@ -138,7 +146,74 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
   }
 });
 
-// 💰 3. Registrar Gastos (Gasolina / Aceite)
+// ⛽️ 3. Cubo Fierro: Registrar Ticket de Gasolina (con IA)
+router.post('/upload/fuel', upload.array('images', 5), async (req, res) => {
+  if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No images uploaded' });
+  const { km_odometro_anterior } = req.body;
+  if (!km_odometro_anterior) return res.status(400).json({ error: 'km_odometro_anterior es requerido' });
+
+  try {
+    const paths = req.files.map(f => f.path);
+    const aiData = await parseFuelReceipt(paths);
+
+    // km_odometro_actual: si la IA lo leyó del odómetro en la imagen, úsalo. Si no, es error.
+    const kmActual = Number(aiData.km_odometro_actual) || 0;
+
+    await db.execute(
+      `INSERT INTO fuel_receipts (
+        fecha, gasolinera, producto, litros, precio_litro,
+        importe_sin_iva, importe_iva, total_pagado,
+        km_odometro_anterior, km_odometro_actual,
+        forma_pago, raw_data_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        aiData.fecha || new Date().toISOString(),
+        aiData.gasolinera || 'No identificada',
+        aiData.producto || 'Magna',
+        aiData.litros || 0,
+        aiData.precio_litro || 0,
+        aiData.importe_sin_iva || 0,
+        aiData.importe_iva || 0,
+        aiData.total_pagado || 0,
+        Number(km_odometro_anterior),
+        kmActual,
+        aiData.forma_pago || 'Efectivo',
+        JSON.stringify(aiData)
+      ]
+    );
+
+    // Recalcular ganancia_real de viajes existentes con el nuevo costo
+    const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
+    if (fuelRows.length > 0) {
+      const newCost = Number(fuelRows[0].costo_real_km);
+      await db.execute('UPDATE entries SET ganancia_real = ganancias_desp_imp - (distancia * ?) WHERE DATE(created_at) = CURDATE()', [newCost]);
+    }
+
+    res.json({ success: true, aiData });
+  } catch (err) {
+    console.error('Error Cubo Fierro:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ⛽️ 4. Cubo Fierro: Historial de Cargas de Gasolina
+router.get('/fuel/history', async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT id, fecha, gasolinera, producto, litros, precio_litro,
+             total_pagado, km_odometro_anterior, km_odometro_actual,
+             km_recorridos, rendimiento_km_l, costo_real_km, 
+             forma_pago, created_at
+      FROM fuel_receipts
+      ORDER BY created_at DESC LIMIT 30
+    `);
+    res.json({ success: true, receipts: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 💰 5. Registrar Gastos Manuales (Aceite / Mantenimiento)
 router.post('/expenses', async (req, res) => {
   const { shift_id, type, amount, odometer, description } = req.body;
   try {
@@ -217,23 +292,23 @@ router.get('/dashboard', async (req, res) => {
   try {
     const [stats] = await db.execute(`
       SELECT 
-        SUM(ganancias_desp_imp) as currentDisposition,
-        AVG(roi_km) as roiPromedio,
-        SUM(distancia) as total_km
+        COALESCE(SUM(ganancias_desp_imp), 0) as currentDisposition,
+        COALESCE(SUM(ganancia_real), 0) as utilidadReal,
+        COALESCE(SUM(ganancias_desp_imp) - SUM(ganancia_real), 0) as gastoGasolina,
+        COALESCE(AVG(roi_km), 0) as roiPromedio,
+        COALESCE(SUM(distancia), 0) as total_km
       FROM entries 
       WHERE DATE(created_at) = CURDATE()
     `);
 
-    // Asumimos un Shift siempre abierto para evitar romper si no hay uno
-    const [shiftData] = await db.execute('SELECT initial_odometer FROM shifts ORDER BY id DESC LIMIT 1');
-    // odometerDiff = KM DiDi recorridos hoy (lo que sí pagaron)
-    const totalKmDidi = Number(stats[0].total_km || 0);
-
+    const result = stats[0];
     res.json({
       success: true,
-      currentDisposition: stats[0].currentDisposition || 0,
-      roi: stats[0].roiPromedio || 0,
-      totalKmDidi: totalKmDidi
+      currentDisposition: Number(result.currentDisposition),
+      utilidadReal: Number(result.utilidadReal),
+      gastoGasolina: Number(result.gastoGasolina),
+      roi: Number(result.roiPromedio),
+      totalKmDidi: Number(result.total_km)
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

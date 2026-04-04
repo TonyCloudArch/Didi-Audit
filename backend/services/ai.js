@@ -52,10 +52,12 @@ async function parseDidiReport(imagePaths) {
           "tarifa_base_total": 0.0,
           "impuesto": 0.0,
           "impuesto_tipo": "Ej: Impuesto al Valor Agregado",
-          "ganancias_desp_imp": 0.0
+          "ganancias_desp_imp": 0.0,
+          "is_valid_didi_ride": true
         }
 
         Instrucciones Especiales:
+        - "is_valid_didi_ride": Si las imágenes NO corresponden a un resumen de viaje de DiDi México, pon este valor en false.
         - "tarifa_dinamica": Busca menciones de multiplicadores o si explícitamente dice que incluye tarifa dinámica. Si no hay, pon "No aplica".
         - "impuesto_tipo": Extrae el texto descriptivo del impuesto si aparece (Ej: IVA, ISR, etc.).
         - "tarifa_base_total": Es el monto "Tarifa total" que aparece dentro del desglose de Tarifa del viaje.
@@ -73,4 +75,63 @@ async function parseDidiReport(imagePaths) {
   return JSON.parse(response.choices[0].message.content);
 }
 
-module.exports = { parseDidiReport };
+/**
+ * Procesa fotos de un ticket de gasolinera + odómetro y extrae los datos.
+ */
+async function parseFuelReceipt(imagePaths) {
+  const contentArray = [{ type: "text", text: "Extrae los datos de este ticket de gasolinera y/o pantalla de odómetro:" }];
+
+  for (const path of imagePaths) {
+    if (path) {
+      const base64Image = fs.readFileSync(path).toString('base64');
+      contentArray.push({
+        type: "image_url",
+        image_url: { url: `data:image/png;base64,${base64Image}` },
+      });
+    }
+  }
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: `Eres el Auditor de Combustible de Didi Audit AI, especializado en leer tickets de gasolineras mexicanas y pantallas de odómetro de autos.
+        
+        Debes devolver UNICAMENTE un objeto JSON con esta estructura exacta:
+        {
+          "fecha": "Ej: 03/04/2026 16:02:23",
+          "gasolinera": "Nombre completo de la gasolinera",
+          "producto": "Ej: Pemex Magna / Premium / Diesel",
+          "litros": 0.000,
+          "precio_litro": 0.0000,
+          "importe_sin_iva": 0.00,
+          "importe_iva": 0.00,
+          "total_pagado": 0.00,
+          "forma_pago": "Efectivo / Tarjeta",
+          "km_odometro_actual": 0,
+          "is_valid_fuel_ticket": true
+        }
+
+        Instrucciones Especiales:
+        - "is_valid_fuel_ticket": Si no hay un ticket de gasolinera o pantalla de odómetro válida, pon este valor en false.
+        - "litros": Busca el campo "Cantidad" en el ticket.
+        - "precio_litro": Busca el campo "Inicio" o "Precio" en el ticket.
+        - "total_pagado": Es el "Importe con impuestos" o total final.
+        - "km_odometro_actual": Si hay una imagen de pantalla de odómetro con 6 dígitos (NO el trip counter parcial), extrae ese número. Si no hay imagen de odómetro, pon 0.
+        - Si el odómetro muestra "km" debajo de un número de 6 dígitos, ese es el odómetro total.
+        - Tu única misión es extraer los datos tal cual aparecen. No calcules nada.
+        `
+      },
+      {
+        role: "user",
+        content: contentArray,
+      },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  return JSON.parse(response.choices[0].message.content);
+}
+
+module.exports = { parseDidiReport, parseFuelReceipt };

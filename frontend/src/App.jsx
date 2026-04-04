@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Camera, History, User, Settings, Play, Square, AlertCircle, TrendingUp, CreditCard, Fuel } from 'lucide-react';
+import { LayoutDashboard, Camera, History, Settings, AlertCircle, CreditCard, Fuel, TrendingUp, TrendingDown } from 'lucide-react';
 
 // 📊 Dashboard Component
 const Dashboard = () => {
-  const [stats, setStats] = useState({ currentDisposition: 0, roi: 0, totalKmDidi: 0 });
+  const [stats, setStats] = useState({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0 });
   const [loading, setLoading] = useState(true);
-  const dailyGoal = 572.00;
+  const dailyGoal = 500.00;
 
   useEffect(() => {
     fetch('http://localhost:3001/api/dashboard')
       .then(r => r.json())
       .then(d => {
-        if (d.success) setStats({ currentDisposition: Number(d.currentDisposition), roi: Number(d.roi), totalKmDidi: Number(d.totalKmDidi) });
+        if (d.success) setStats({ 
+          currentDisposition: Number(d.currentDisposition), 
+          utilidadReal: Number(d.utilidadReal),
+          gastoGasolina: Number(d.gastoGasolina),
+          roi: Number(d.roi), 
+          totalKmDidi: Number(d.totalKmDidi) 
+        });
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  const { currentDisposition, roi, totalKmDidi } = stats;
+  const { currentDisposition, utilidadReal, gastoGasolina, roi, totalKmDidi } = stats;
 
   return (
     <div className="mobile-container">
@@ -28,16 +34,35 @@ const Dashboard = () => {
       </div>
 
       {/* 🏁 Meta Diaria (Cubo de Disposición) */}
-      <div className="card">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+        <div className="card" style={{ marginBottom: '10px', padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '10px' }}>TOTAL DIDI</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${currentDisposition.toFixed(2)}</div>
+        </div>
+        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'var(--error-red)', borderLeft: '4px solid var(--error-red)' }}>
+          <div className="card-title" style={{ fontSize: '10px', color: 'var(--error-red)' }}>GASOLINA</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
+        </div>
+        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'var(--success-green)', borderLeft: '4px solid var(--success-green)' }}>
+          <div className="card-title" style={{ fontSize: '10px', color: 'var(--success-green)' }}>UTILIDAD</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--success-green)' }}>${utilidadReal.toFixed(2)}</div>
+        </div>
+      </div>
+
+      {/* 📊 Progreso de Meta (Utilidad Real) */}
+      <div className="card" style={{ marginTop: '0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="card-title">Cubo de Disposición (Meta Hoy)</div>
           <div style={{ fontSize: '12px', color: 'var(--didi-orange)' }}>${dailyGoal} MXN</div>
         </div>
-        <div className="card-value">${currentDisposition.toFixed(2)}</div>
-        <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '4px', marginTop: '12px', overflow: 'hidden' }}>
-          <div style={{ width: `${(currentDisposition / dailyGoal) * 100}%`, height: '100%', backgroundColor: 'var(--didi-orange)', transition: 'width 0.5s ease' }}></div>
+        <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '4px', marginTop: '8px', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, height: '100%', backgroundColor: 'var(--didi-orange)', transition: 'width 0.5s ease' }}></div>
         </div>
-        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>Faltan ${(dailyGoal - currentDisposition).toFixed(2)} para los estudios/perros.</p>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+          {utilidadReal >= dailyGoal 
+            ? '✅ ¡META LOGRADA! Todo lo que entre ahora es ganancia pura.' 
+            : `Faltan $${(dailyGoal - utilidadReal).toFixed(2)} para la meta de hoy.`}
+        </p>
       </div>
 
       {/* 🚀 Selección IQ (ROI) */}
@@ -75,10 +100,10 @@ const Dashboard = () => {
           <Camera size={32} />
           Lector Mágico
         </Link>
-        <button className="btn btn-secondary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
+        <Link to="/cubo" className="btn btn-secondary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
           <Fuel size={32} />
           Cubo Fierro
-        </button>
+        </Link>
       </div>
     </div>
   );
@@ -320,6 +345,185 @@ const HistoryView = () => {
   );
 };
 
+// ⛽️ Cubo Fierro Component
+const CuboFierro = () => {
+  const [files, setFiles] = useState([]);
+  const [kmAnterior, setKmAnterior] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [receipts, setReceipts] = useState([]);
+  const [latestCost, setLatestCost] = useState(null);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/fuel/history');
+      const data = await res.json();
+      if (data.success) {
+        setReceipts(data.receipts);
+        if (data.receipts.length > 0) setLatestCost(Number(data.receipts[0].costo_real_km));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { fetchHistory(); }, []);
+
+  const handleUpload = async () => {
+    if (files.length === 0 || !kmAnterior) return;
+    setLoading(true);
+    setProgress('Procesando ticket con IA...');
+    const formData = new FormData();
+    files.forEach(f => formData.append('images', f));
+    formData.append('km_odometro_anterior', kmAnterior);
+    try {
+      const res = await fetch('http://localhost:3001/api/upload/fuel', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        setProgress('✅ Ticket registrado. Costo actualizado automáticamente.');
+        setFiles([]);
+        setKmAnterior('');
+        fetchHistory();
+      } else {
+        setProgress(`Error: ${data.error}`);
+      }
+    } catch (e) {
+      setProgress('Error de conexión.');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="mobile-container">
+      <div className="header" style={{ textAlign: 'center' }}>
+        <h1>CUBO FIERRO</h1>
+      </div>
+
+      {/* 📊 Indicador de Costo Actual */}
+      {latestCost && (
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: latestCost > 2.0 ? '4px solid var(--error-red)' : '4px solid var(--success-green)' }}>
+          <div>
+            <div style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1px' }}>COSTO GASOLINA ACTUAL</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: latestCost > 2.0 ? 'var(--error-red)' : 'var(--success-green)' }}>${latestCost.toFixed(4)}/km</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            {latestCost > 2.0 
+              ? <TrendingUp size={32} color="var(--error-red)" />
+              : <TrendingDown size={32} color="var(--success-green)" />}
+            <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>aplicado a nuevos viajes</div>
+          </div>
+        </div>
+      )}
+
+      {/* 📸 Cargador de Ticket */}
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 'bold' }}>Registrar Nueva Carga</div>
+
+        <div style={{ position: 'relative', height: '120px', border: '2px dashed #444', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {files.length > 0 ? (
+            <div style={{ textAlign: 'center' }}>
+              <Fuel size={32} color="var(--success-green)" />
+              <div style={{ fontSize: '12px', marginTop: '8px' }}>{files.length} foto(s) lista(s)</div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <Fuel size={32} color="var(--didi-orange)" />
+              <div style={{ fontSize: '11px', color: '#888', marginTop: '8px' }}>Ticket + Odómetro (máx 5 fotos)</div>
+            </div>
+          )}
+          <input type="file" accept="image/*" multiple onChange={(e) => setFiles(prev => [...prev, ...Array.from(e.target.files)])} style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
+        </div>
+
+        {/* 📸 Lista de Archivos Seleccionados con opción de BORRAR */}
+        {files.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+            {files.map((file, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1a1a1a', padding: '8px 12px', borderRadius: '6px', border: '1px solid #333' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Fuel size={14} color="var(--success-green)" />
+                  <span style={{ fontSize: '11px', color: '#eee', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                </div>
+                <button 
+                  onClick={() => setFiles(files.filter((_, i) => i !== idx))}
+                  style={{ background: 'none', border: 'none', color: 'var(--error-red)', cursor: 'pointer', padding: '4px' }}
+                >
+                  <AlertCircle size={16} />
+                </button>
+              </div>
+            ))}
+            <button 
+              onClick={() => setFiles([])} 
+              style={{ fontSize: '10px', color: 'var(--error-red)', textAlign: 'right', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Limpiar todo
+            </button>
+          </div>
+        )}
+
+        <div>
+          <div style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '6px' }}>ODÓMETRO ANTERIOR (km apertura o última carga)</div>
+          <input
+            type="number"
+            value={kmAnterior}
+            onChange={(e) => setKmAnterior(e.target.value)}
+            placeholder="Ej: 195471"
+            style={{ width: '100%', padding: '10px', backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: '8px', color: 'white', fontSize: '16px', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        {progress && <p style={{ color: 'var(--didi-orange)', fontSize: '12px', textAlign: 'center' }}>{progress}</p>}
+
+        <button className="btn btn-primary" disabled={files.length === 0 || !kmAnterior || loading} onClick={handleUpload}>
+          {loading ? 'Procesando con IA...' : '⛽ Registrar Carga'}
+        </button>
+      </div>
+
+      {/* 📜 Historial de Cargas */}
+      <div style={{ marginTop: '8px' }}>
+        <div style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '10px' }}>HISTORIAL DE CARGAS</div>
+        {receipts.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>Sin registros aún. ¡Sube tu primer ticket!</div>
+        ) : (
+          receipts.map((r, i) => {
+            const prevCost = i < receipts.length - 1 ? Number(receipts[i + 1].costo_real_km) : null;
+            const isUp = prevCost && Number(r.costo_real_km) > prevCost;
+            return (
+              <div key={r.id} className="card" style={{ borderLeft: isUp ? '4px solid var(--error-red)' : '4px solid var(--success-green)', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{r.gasolinera}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{r.fecha} • {r.producto}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: isUp ? 'var(--error-red)' : 'var(--success-green)' }}>${Number(r.costo_real_km).toFixed(4)}/km</div>
+                    {prevCost && <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{isUp ? '▲' : '▼'} vs anterior</div>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #333' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>LITROS</div>
+                    <div style={{ fontSize: '13px' }}>{Number(r.litros).toFixed(2)} L</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>PRECIO/L</div>
+                    <div style={{ fontSize: '13px' }}>${Number(r.precio_litro).toFixed(4)}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>KM RECORRIDOS</div>
+                    <div style={{ fontSize: '13px' }}>{r.km_recorridos} km</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>TOTAL</div>
+                    <div style={{ fontSize: '13px' }}>${Number(r.total_pagado).toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const location = useLocation();
 
@@ -329,6 +533,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/audit" element={<Audit />} />
         <Route path="/history" element={<HistoryView />} />
+        <Route path="/cubo" element={<CuboFierro />} />
         <Route path="/profile" element={<div className="mobile-container"><h1>Configuración</h1><div className="card">Vehículo: Attitude 2019<br />Placas: Mazatlán</div></div>} />
       </Routes>
 
@@ -344,7 +549,11 @@ function App() {
         </Link>
         <Link to="/history" className={`nav-item ${location.pathname === '/history' ? 'active' : ''}`}>
           <History size={24} />
-          <span>Logs</span>
+          <span>Viajes</span>
+        </Link>
+        <Link to="/cubo" className={`nav-item ${location.pathname === '/cubo' ? 'active' : ''}`}>
+          <Fuel size={24} />
+          <span>Cubo</span>
         </Link>
         <Link to="/profile" className={`nav-item ${location.pathname === '/profile' ? 'active' : ''}`}>
           <Settings size={24} />
