@@ -258,14 +258,25 @@ router.post('/shifts/close', async (req, res) => {
 
 // 📜 5. Historial de Decisiones (Diario/Semanal/Mensual)
 router.get('/history', async (req, res) => {
-  const { period } = req.query; // 'day', 'week', 'month'
+  const { period, date: queryDate } = req.query; // 'day', 'week', 'month', 'YYYY-MM-DD'
   try {
-    let dateFilter = '';
-    if (period === 'day') dateFilter = 'DATE(created_at) = CURDATE()';
-    else if (period === 'week') dateFilter = 'YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)';
-    else if (period === 'month') dateFilter = 'MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())';
+    const localDateExpr = 'DATE(CONVERT_TZ(created_at, "+00:00", "-07:00"))';
+    const todayExpr = 'DATE(CONVERT_TZ(NOW(), "+00:00", "-07:00"))';
 
-    // Si no pasan 'period', se traen los últimos 50 viajes.
+    let dateFilter = '';
+    let params = [];
+
+    if (queryDate) {
+      dateFilter = `${localDateExpr} = ? OR DATE(fecha_hora_viaje) = ?`;
+      params = [queryDate, queryDate];
+    } else if (period === 'day') {
+      dateFilter = `${localDateExpr} = ${todayExpr}`;
+    } else if (period === 'week') {
+      dateFilter = `YEARWEEK(CONVERT_TZ(created_at, "+00:00", "-07:00"), 1) = YEARWEEK(CONVERT_TZ(NOW(), "+00:00", "-07:00"), 1)`;
+    } else if (period === 'month') {
+      dateFilter = `MONTH(CONVERT_TZ(created_at, "+00:00", "-07:00")) = MONTH(CONVERT_TZ(NOW(), "+00:00", "-07:00")) AND YEAR(CONVERT_TZ(created_at, "+00:00", "-07:00")) = YEAR(CONVERT_TZ(NOW(), "+00:00", "-07:00"))`;
+    }
+
     const query = `
       SELECT 
         id, pasajero_nombre, distancia, duracion, fecha_hora_viaje, 
@@ -278,9 +289,9 @@ router.get('/history', async (req, res) => {
         created_at 
       FROM entries 
       ${dateFilter ? 'WHERE ' + dateFilter : ''} 
-      ORDER BY created_at DESC LIMIT 50
+      ORDER BY created_at DESC LIMIT 100
     `;
-    const [entries] = await db.execute(query);
+    const [entries] = await db.execute(query, params);
     res.json({ success: true, entries });
   } catch (err) {
     res.status(500).json({ error: err.message });

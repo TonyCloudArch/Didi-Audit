@@ -199,15 +199,18 @@ const Audit = () => {
 // 📜 History Component
 const HistoryView = () => {
   const [entries, setEntries] = useState([]);
-  const [period, setPeriod] = useState('week'); // day, week, month
+  const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
+  const [period, setPeriod] = useState('day'); 
   const [loading, setLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState([]);
 
   useEffect(() => {
     const fetchHistory = async () => {
       setLoading(true);
+      setEntries([]); // 🧹 Limpiar antes de cargar para evitar ver datos viejos
       try {
-        const res = await fetch(`http://localhost:3001/api/history?period=${period}`);
+        const url = date ? `http://localhost:3001/api/history?date=${date}` : `http://localhost:3001/api/history?period=${period}`;
+        const res = await fetch(url);
         const data = await res.json();
         if (data.success) {
           setEntries(data.entries);
@@ -218,7 +221,14 @@ const HistoryView = () => {
       setLoading(false);
     };
     fetchHistory();
-  }, [period]);
+    
+    // Auto-detección de 'Hoy' para el color del botón
+    if (date === new Date().toLocaleDateString('sv')) {
+      setPeriod('day');
+    } else if (date) {
+      setPeriod('');
+    }
+  }, [period, date]);
 
   const toggleExpand = (id) => {
     if (expandedIds.includes(id)) {
@@ -230,21 +240,35 @@ const HistoryView = () => {
 
   return (
     <div className="mobile-container">
-      <div className="header" style={{ textAlign: 'center' }}>
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <h1>VIAJES</h1>
+        <input 
+          type="date" 
+          value={date} 
+          onChange={(e) => {
+            setDate(e.target.value);
+            setPeriod(''); // Al elegir fecha manual, limpiamos el periodo predefinido
+          }}
+          style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
+        />
       </div>
 
-      {/* 📅 Filtros */}
+      {/* 📅 Filtros Rápidos */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button onClick={() => setPeriod('day')} className={`btn ${period === 'day' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Hoy</button>
-        <button onClick={() => setPeriod('week')} className={`btn ${period === 'week' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Semana</button>
-        <button onClick={() => setPeriod('month')} className={`btn ${period === 'month' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Mes</button>
+        <button onClick={() => { setPeriod('day'); setDate(new Date().toLocaleDateString('sv')); }} className={`btn ${period === 'day' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Hoy</button>
+        <button onClick={() => { setPeriod('week'); setDate(''); }} className={`btn ${period === 'week' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Semana</button>
+        <button onClick={() => { setPeriod('month'); setDate(''); }} className={`btn ${period === 'month' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Mes</button>
       </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '20px' }}>Auditando registros...</div>
       ) : (
-        entries.length === 0 ? (
+        (period === 'week' || period === 'month') ? (
+          <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+            Consolidado {(period === 'week' ? 'semanal' : 'mensual')} próximamente. ✨
+            <br/><small style={{ fontSize: '10px' }}>Estamos preparando las tarjetas de rentabilidad acumulada.</small>
+          </div>
+        ) : entries.length === 0 ? (
           <div className="card" style={{ textAlign: 'center' }}>No hay viajes registrados en este periodo.</div>
         ) : (
           entries.map((entry) => {
