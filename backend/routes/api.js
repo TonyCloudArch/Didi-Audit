@@ -77,10 +77,11 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
             fecha_hora_viaje, origen_direccion, destino_direccion, 
             tipo_vehiculo, metodo_pago, efectivo_recibido, 
             pagado_por_el_pasajero, tus_ganancias, ganancias_antes_imp, 
-            tarifa_del_viaje, tarifa_de_servicio, cuota_de_solicitud, 
-            monto_adicional_por_gasolina, impuesto, ganancias_desp_imp, 
+            tarifa_del_viaje, tarifa_base_total, tarifa_de_servicio, 
+            cuota_de_solicitud, tarifa_dinamica, monto_adicional_por_gasolina, 
+            impuesto, impuesto_tipo, ganancias_desp_imp, 
             roi_km, calificacion_seleccion, raw_data_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             shiftId,
             aiData.pasajero_nombre || 'App DiDi',
@@ -96,10 +97,13 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
             aiData.tus_ganancias || 0,
             aiData.ganancias_antes_imp || 0,
             aiData.tarifa_del_viaje || 0,
+            aiData.tarifa_base_total || 0,
             aiData.tarifa_de_servicio || 0,
             aiData.cuota_de_solicitud || 0,
+            aiData.tarifa_dinamica || 'No aplica',
             aiData.monto_adicional_por_gasolina || 0,
             aiData.impuesto || 0,
+            aiData.impuesto_tipo || 'IVA',
             n,
             roi,
             calificacion,
@@ -187,8 +191,9 @@ router.get('/history', async (req, res) => {
         id, pasajero_nombre, distancia, duracion, fecha_hora_viaje, 
         origen_direccion, destino_direccion, tipo_vehiculo, metodo_pago, 
         efectivo_recibido, pagado_por_el_pasajero, tus_ganancias, 
-        ganancias_antes_imp, tarifa_del_viaje, tarifa_de_servicio, 
-        cuota_de_solicitud, monto_adicional_por_gasolina, impuesto, 
+        ganancias_antes_imp, tarifa_del_viaje, tarifa_base_total, 
+        tarifa_de_servicio, cuota_de_solicitud, tarifa_dinamica, 
+        monto_adicional_por_gasolina, impuesto, impuesto_tipo, 
         ganancias_desp_imp, roi_km, calificacion_seleccion, created_at 
       FROM entries 
       ${dateFilter ? 'WHERE ' + dateFilter : ''} 

@@ -222,8 +222,8 @@ const HistoryView = () => {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{entry.pasajero_nombre || 'App DiDi'}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.distancia} km • ${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.distancia} km</div>
+                    <div style={{ fontWeight: 'bold', fontSize: '16px', color: 'var(--success-green)' }}>${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className={`card-value ${isBad ? 'indicator-red' : 'indicator-green'}`} style={{ fontSize: '18px' }}>
@@ -243,6 +243,36 @@ const HistoryView = () => {
                       </div>
                     </div>
 
+                    {/* 💰 Desglose Financiero (Reflejo DiDi) */}
+                    <div style={{ backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{color: 'var(--text-muted)'}}>Pagado por el Pasajero</span>
+                         <span>${parseFloat(entry.pagado_por_el_pasajero).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{color: 'var(--text-muted)'}}>Comisión DiDi Estimada</span>
+                         <span style={{color: 'var(--error-red)'}}>-${(parseFloat(entry.tarifa_de_servicio) + parseFloat(entry.cuota_de_solicitud)).toFixed(2)}</span>
+                      </div>
+                      {entry.tarifa_dinamica !== 'No aplica' && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                           <span style={{color: 'var(--didi-orange)'}}>Tarifa Dinámica</span>
+                           <span style={{color: 'var(--didi-orange)'}}>{entry.tarifa_dinamica}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{color: 'var(--text-muted)'}}>Monto Adicional Gasolina</span>
+                         <span style={{color: 'var(--success-green)'}}>+${parseFloat(entry.monto_adicional_por_gasolina).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{color: 'var(--text-muted)'}}>{entry.impuesto_tipo || 'Impuesto'}</span>
+                         <span style={{color: 'var(--error-red)'}}>-${parseFloat(entry.impuesto).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px', borderTop: '1px solid #333', paddingTop: '8px', fontWeight: 'bold' }}>
+                         <span>Utilidad Neta (Cubo)</span>
+                         <span style={{color: 'var(--success-green)'}}>${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</span>
+                      </div>
+                    </div>
+
                     {/* 📍 Ruta */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
@@ -255,36 +285,15 @@ const HistoryView = () => {
                       </div>
                     </div>
 
-                    {/* 💰 Desglose Financiero (Reflejo DiDi) */}
-                    <div style={{ backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                         <span style={{color: 'var(--text-muted)'}}>Pagado por el Pasajero</span>
-                         <span>${parseFloat(entry.pagado_por_el_pasajero).toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                         <span style={{color: 'var(--text-muted)'}}>Comisión DiDi Estimada</span>
-                         <span style={{color: 'var(--error-red)'}}>-${(parseFloat(entry.tarifa_de_servicio) + parseFloat(entry.cuota_de_solicitud)).toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                         <span style={{color: 'var(--text-muted)'}}>Monto Adicional Gasolina</span>
-                         <span style={{color: 'var(--success-green)'}}>+${parseFloat(entry.monto_adicional_por_gasolina).toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px', borderTop: '1px solid #333', paddingTop: '8px', fontWeight: 'bold' }}>
-                         <span>Utilidad Neta (Cubo)</span>
-                         <span style={{color: 'var(--success-green)'}}>${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</span>
-                      </div>
-                    </div>
-
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                        <div style={{fontSize: '10px', color: 'var(--text-muted)'}}>
                          <Fuel size={12} style={{marginRight: '4px', verticalAlign: 'middle'}} />
-                         {entry.tipo_vehiculo} • {entry.metodo_pago}
+                         {entry.tipo_vehiculo} • {entry.pasajero_nombre}
                        </div>
-                       {entry.metodo_pago === 'En efectivo' && (
-                         <div style={{ fontSize: '10px', color: 'var(--didi-orange)', fontWeight: 'bold' }}>
-                           Recibiste: ${parseFloat(entry.efectivo_recibido).toFixed(2)}
-                         </div>
-                       )}
+                       <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right' }}>
+                          <CreditCard size={12} style={{marginRight: '4px', verticalAlign: 'middle'}} />
+                          {entry.metodo_pago} {entry.metodo_pago === 'En efectivo' ? `($${parseFloat(entry.efectivo_recibido).toFixed(2)})` : ''}
+                       </div>
                     </div>
                   </div>
                 )}

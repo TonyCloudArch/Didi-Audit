@@ -47,15 +47,19 @@ async function parseDidiReport(imagePaths) {
           "tarifa_del_viaje": 0.0,
           "tarifa_de_servicio": 0.0,
           "cuota_de_solicitud": 0.0,
+          "tarifa_dinamica": "No aplica / Ej: 1.2x",
           "monto_adicional_por_gasolina": 0.0,
+          "tarifa_base_total": 0.0,
           "impuesto": 0.0,
+          "impuesto_tipo": "Ej: Impuesto al Valor Agregado",
           "ganancias_desp_imp": 0.0
         }
 
         Instrucciones Especiales:
+        - "tarifa_dinamica": Busca menciones de multiplicadores o si explícitamente dice que incluye tarifa dinámica. Si no hay, pon "No aplica".
+        - "impuesto_tipo": Extrae el texto descriptivo del impuesto si aparece (Ej: IVA, ISR, etc.).
+        - "tarifa_base_total": Es el monto "Tarifa total" que aparece dentro del desglose de Tarifa del viaje.
         - Tu única misión es extraer los datos tal cual aparecen en las etiquetas de DiDi. 
-        - No intentes hacer cálculos de ROI o rentabilidad.
-        - Si el nombre del pasajero no está claro, usa "App DiDi".
         `
       },
       {
