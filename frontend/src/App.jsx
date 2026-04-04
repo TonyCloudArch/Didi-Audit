@@ -164,6 +164,7 @@ const HistoryView = () => {
   const [entries, setEntries] = useState([]);
   const [period, setPeriod] = useState('week'); // day, week, month
   const [loading, setLoading] = useState(false);
+  const [expandedIds, setExpandedIds] = useState([]);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -182,10 +183,18 @@ const HistoryView = () => {
     fetchHistory();
   }, [period]);
 
+  const toggleExpand = (id) => {
+    if (expandedIds.includes(id)) {
+      setExpandedIds(expandedIds.filter(item => item !== id));
+    } else {
+      setExpandedIds([...expandedIds, id]);
+    }
+  };
+
   return (
     <div className="mobile-container">
-      <div className="header">
-        <h1>Auditoría Maestra</h1>
+      <div className="header" style={{ textAlign: 'center' }}>
+        <h1>VIAJES</h1>
       </div>
 
       {/* 📅 Filtros */}
@@ -203,18 +212,82 @@ const HistoryView = () => {
         ) : (
           entries.map((entry) => {
             const isBad = entry.calificacion_seleccion === 'Ineficiente' || entry.calificacion_seleccion === 'Bajo';
+            const isExpanded = expandedIds.includes(entry.id);
             return (
-              <div key={entry.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: isBad ? '4px solid var(--error-red)' : '4px solid var(--success-green)' }}>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{entry.pasajero_nombre || 'App DiDi'}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.distancia} km • ${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className={`card-value ${isBad ? 'indicator-red' : 'indicator-green'}`} style={{ fontSize: '18px' }}>
-                    ${parseFloat(entry.roi_km).toFixed(2)}/km
+              <div key={entry.id} onClick={() => toggleExpand(entry.id)} className="card" style={{ 
+                cursor: 'pointer',
+                borderLeft: isBad ? '4px solid var(--error-red)' : '4px solid var(--success-green)',
+                transition: 'all 0.3s ease',
+                padding: isExpanded ? '20px' : '15px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{entry.pasajero_nombre || 'App DiDi'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.distancia} km • ${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</div>
                   </div>
-                  <span style={{ fontSize: '9px', fontWeight: 'bold', color: 'var(--text-muted)' }}>{entry.calificacion_seleccion}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className={`card-value ${isBad ? 'indicator-red' : 'indicator-green'}`} style={{ fontSize: '18px' }}>
+                      ${parseFloat(entry.roi_km).toFixed(2)}/km
+                    </div>
+                    <span style={{ fontSize: '9px', fontWeight: 'bold', color: 'var(--text-muted)' }}>{entry.calificacion_seleccion}</span>
+                  </div>
                 </div>
+
+                {isExpanded && (
+                  <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {/* 🕒 Tiempos */}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <AlertCircle size={16} color="var(--didi-orange)" />
+                      <div style={{ fontSize: '12px' }}>
+                        <strong>{entry.duracion}</strong> • Realizado el {entry.fecha_hora_viaje}
+                      </div>
+                    </div>
+
+                    {/* 📍 Ruta */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success-green)', marginTop: '4px' }}></div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.origen_direccion}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)', marginTop: '4px' }}></div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.destino_direccion}</div>
+                      </div>
+                    </div>
+
+                    {/* 💰 Desglose Financiero (Reflejo DiDi) */}
+                    <div style={{ backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{color: 'var(--text-muted)'}}>Pagado por el Pasajero</span>
+                         <span>${parseFloat(entry.pagado_por_el_pasajero).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{color: 'var(--text-muted)'}}>Comisión DiDi Estimada</span>
+                         <span style={{color: 'var(--error-red)'}}>-${(parseFloat(entry.tarifa_de_servicio) + parseFloat(entry.cuota_de_solicitud)).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{color: 'var(--text-muted)'}}>Monto Adicional Gasolina</span>
+                         <span style={{color: 'var(--success-green)'}}>+${parseFloat(entry.monto_adicional_por_gasolina).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px', borderTop: '1px solid #333', paddingTop: '8px', fontWeight: 'bold' }}>
+                         <span>Utilidad Neta (Cubo)</span>
+                         <span style={{color: 'var(--success-green)'}}>${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                       <div style={{fontSize: '10px', color: 'var(--text-muted)'}}>
+                         <Fuel size={12} style={{marginRight: '4px', verticalAlign: 'middle'}} />
+                         {entry.tipo_vehiculo} • {entry.metodo_pago}
+                       </div>
+                       {entry.metodo_pago === 'En efectivo' && (
+                         <div style={{ fontSize: '10px', color: 'var(--didi-orange)', fontWeight: 'bold' }}>
+                           Recibiste: ${parseFloat(entry.efectivo_recibido).toFixed(2)}
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })

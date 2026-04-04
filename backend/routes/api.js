@@ -183,7 +183,13 @@ router.get('/history', async (req, res) => {
 
     // Si no pasan 'period', se traen los últimos 50 viajes.
     const query = `
-      SELECT id, pasajero_nombre, distancia, ganancias_desp_imp, roi_km, calificacion_seleccion, created_at 
+      SELECT 
+        id, pasajero_nombre, distancia, duracion, fecha_hora_viaje, 
+        origen_direccion, destino_direccion, tipo_vehiculo, metodo_pago, 
+        efectivo_recibido, pagado_por_el_pasajero, tus_ganancias, 
+        ganancias_antes_imp, tarifa_del_viaje, tarifa_de_servicio, 
+        cuota_de_solicitud, monto_adicional_por_gasolina, impuesto, 
+        ganancias_desp_imp, roi_km, calificacion_seleccion, created_at 
       FROM entries 
       ${dateFilter ? 'WHERE ' + dateFilter : ''} 
       ORDER BY created_at DESC LIMIT 50
