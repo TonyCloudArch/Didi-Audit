@@ -32,29 +32,30 @@ async function parseDidiReport(imagePaths) {
         
         Debes devolver UNICAMENTE un objeto JSON con esta estructura exacta:
         {
-          "pasajero": "Nombre",
-          "distancia_didi_km": 0.0,
-          "ganancia_bruta": 0.0,
-          "ganancia_antes_impuesto": 0.0,
-          "tarifa_servicio": 0.0,
-          "cuota_solicitud": 0.0,
-          "monto_adicional_gasolina": 0.0,
-          "impuesto_total": 0.0,
-          "ganancia_neta_final": 0.0,
+          "pasajero_nombre": "Nombre del pasajero",
+          "distancia": 0.0,
+          "duracion": "Ej: 14m 24s",
+          "fecha_hora_viaje": "Ej: 31/03/2026, 11:33:18 am",
+          "origen_direccion": "Dirección completa punto verde",
+          "destino_direccion": "Dirección completa punto naranja",
+          "tipo_vehiculo": "Ej: Express",
           "metodo_pago": "Efectivo/Tarjeta",
-          "roi_km": 0.0,
-          "calificacion_seleccion": "Súper Élite/Excelente/Eficiente/Meta/Aceptable/Bajo/Ineficiente"
+          "efectivo_recibido": 0.0,
+          "pagado_por_el_pasajero": 0.0,
+          "tus_ganancias": 0.0,
+          "ganancias_antes_imp": 0.0,
+          "tarifa_del_viaje": 0.0,
+          "tarifa_de_servicio": 0.0,
+          "cuota_de_solicitud": 0.0,
+          "monto_adicional_por_gasolina": 0.0,
+          "impuesto": 0.0,
+          "ganancias_desp_imp": 0.0
         }
 
-        Reglas de Negocio (TABLA DE ACEPTACION MAZATLAN):
-        - Distancia 1.0 a 3.7 km: Pago Mínimo $30.00.
-        - Distancia >= 4.0 km: Aplicar REGLA DEL $8/KM (KM * 8 = Pago Mínimo).
-        - Ejemplos de Validación: 4km=$32, 5km=$40, 6km=$48, 7km=$56, 8km=$64, 10km=$80, 15km=$120.
-        - Calificación:
-          - Súper Élite: ROI > $18/km
-          - Excelente: Cumple tabla o ROI > $12/km
-          - Meta: Cumple la Regla del $8/km
-          - Ineficiente: Por debajo de la Regla del $8/km
+        Instrucciones Especiales:
+        - Tu única misión es extraer los datos tal cual aparecen en las etiquetas de DiDi. 
+        - No intentes hacer cálculos de ROI o rentabilidad.
+        - Si el nombre del pasajero no está claro, usa "App DiDi".
         `
       },
       {

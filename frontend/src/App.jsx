@@ -206,8 +206,8 @@ const HistoryView = () => {
             return (
               <div key={entry.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: isBad ? '4px solid var(--error-red)' : '4px solid var(--success-green)' }}>
                 <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{entry.pasajero || 'App DiDi'}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.distancia_didi_km} km • ${parseFloat(entry.ganancia_neta_final).toFixed(2)}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{entry.pasajero_nombre || 'App DiDi'}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.distancia} km • ${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div className={`card-value ${isBad ? 'indicator-red' : 'indicator-green'}`} style={{ fontSize: '18px' }}>

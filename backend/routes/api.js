@@ -53,28 +53,56 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         // 1. IA extrae datos del par de imágenes
         const aiData = await parseDidiReport(paths);
 
-        // 2. Guardar en BD
+        // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática real en el Servidor)
+        const d = Number(aiData.distancia) || 0;
+        const n = Number(aiData.ganancias_desp_imp) || 0;
+        const roi = d > 0 ? (n / d) : 0;
+        
+        // El Juez Mazatleco decide:
+        let calificacion = "Ineficiente";
+        if (roi >= 18) calificacion = "Súper Élite";
+        else if (roi >= 12) calificacion = "Excelente";
+        else {
+          if (d < 4) {
+            if (n >= 30) calificacion = "Meta";
+          } else {
+            if (roi >= 8) calificacion = "Meta";
+          }
+        }
+
+        // 2. Guardar en BD con nombres EXACTOS de DiDi (y cálculos confiables)
         await db.execute(
           `INSERT INTO entries (
-            shift_id, pasajero, distancia_didi_km, ganancia_bruta, 
-            ganancia_antes_impuesto, tarifa_servicio, cuota_solicitud, 
-            monto_adicional_gasolina, impuesto_total, ganancia_neta_final, 
-            metodo_pago, roi_km, calificacion_seleccion, raw_data_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            shift_id, pasajero_nombre, distancia, duracion, 
+            fecha_hora_viaje, origen_direccion, destino_direccion, 
+            tipo_vehiculo, metodo_pago, efectivo_recibido, 
+            pagado_por_el_pasajero, tus_ganancias, ganancias_antes_imp, 
+            tarifa_del_viaje, tarifa_de_servicio, cuota_de_solicitud, 
+            monto_adicional_por_gasolina, impuesto, ganancias_desp_imp, 
+            roi_km, calificacion_seleccion, raw_data_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             shiftId,
-            aiData.pasajero || 'App DiDi',
-            aiData.distancia_didi_km || 0,
-            aiData.ganancia_bruta || 0,
-            aiData.ganancia_antes_impuesto || 0,
-            aiData.tarifa_servicio || 0,
-            aiData.cuota_solicitud || 0,
-            aiData.monto_adicional_gasolina || 0,
-            aiData.impuesto_total || 0,
-            aiData.ganancia_neta_final || 0,
+            aiData.pasajero_nombre || 'App DiDi',
+            d,
+            aiData.duracion || '-',
+            aiData.fecha_hora_viaje || '-',
+            aiData.origen_direccion || '-',
+            aiData.destino_direccion || '-',
+            aiData.tipo_vehiculo || '-',
             aiData.metodo_pago || 'Desconocido',
-            aiData.roi_km || 0,
-            aiData.calificacion_seleccion || '-',
+            aiData.efectivo_recibido || 0,
+            aiData.pagado_por_el_pasajero || 0,
+            aiData.tus_ganancias || 0,
+            aiData.ganancias_antes_imp || 0,
+            aiData.tarifa_del_viaje || 0,
+            aiData.tarifa_de_servicio || 0,
+            aiData.cuota_de_solicitud || 0,
+            aiData.monto_adicional_por_gasolina || 0,
+            aiData.impuesto || 0,
+            n,
+            roi,
+            calificacion,
             JSON.stringify(aiData)
           ]
         );
@@ -119,8 +147,8 @@ router.post('/expenses', async (req, res) => {
 router.post('/shifts/close', async (req, res) => {
   const { shift_id, final_odometer, final_cash_counted } = req.body;
   try {
-    // Calcular totales usando columnas reales de la tabla entries
-    const [entries] = await db.execute('SELECT SUM(ganancia_neta_final) as total_neto, SUM(distancia_didi_km) as total_km FROM entries WHERE shift_id = ?', [shift_id]);
+    // Calcular totales usando nombres exactos
+    const [entries] = await db.execute('SELECT SUM(ganancias_desp_imp) as total_neto, SUM(distancia) as total_km FROM entries WHERE shift_id = ?', [shift_id]);
     const [expenses] = await db.execute('SELECT SUM(amount) as total_exp FROM expenses WHERE shift_id = ?', [shift_id]);
     const [shift] = await db.execute('SELECT initial_cash, initial_odometer FROM shifts WHERE id = ?', [shift_id]);
 
@@ -155,7 +183,7 @@ router.get('/history', async (req, res) => {
 
     // Si no pasan 'period', se traen los últimos 50 viajes.
     const query = `
-      SELECT id, pasajero, distancia_didi_km, ganancia_neta_final, roi_km, calificacion_seleccion, created_at 
+      SELECT id, pasajero_nombre, distancia, ganancias_desp_imp, roi_km, calificacion_seleccion, created_at 
       FROM entries 
       ${dateFilter ? 'WHERE ' + dateFilter : ''} 
       ORDER BY created_at DESC LIMIT 50
@@ -172,9 +200,9 @@ router.get('/dashboard', async (req, res) => {
   try {
     const [stats] = await db.execute(`
       SELECT 
-        SUM(ganancia_neta_final) as currentDisposition,
+        SUM(ganancias_desp_imp) as currentDisposition,
         AVG(roi_km) as roiPromedio,
-        SUM(distancia_didi_km) as total_km
+        SUM(distancia) as total_km
       FROM entries 
       WHERE DATE(created_at) = CURDATE()
     `);
