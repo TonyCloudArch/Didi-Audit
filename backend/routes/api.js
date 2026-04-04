@@ -12,6 +12,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// ⛽️ Configuración de Costos (Dodge Attitude 2019 • Mazatlán)
+const GAS_COST_PER_KM = 1.40; 
+
 // 🎬 1. Iniciar Turno (Apertura)
 router.post('/shifts/open', async (req, res) => {
   const { initial_odometer, initial_cash } = req.body;
@@ -57,6 +60,7 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         const d = Number(aiData.distancia) || 0;
         const n = Number(aiData.ganancias_desp_imp) || 0;
         const roi = d > 0 ? (n / d) : 0;
+        const profitReal = n - (d * GAS_COST_PER_KM);
         
         // El Juez Mazatleco decide:
         let calificacion = "Ineficiente";
@@ -79,9 +83,9 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
             pagado_por_el_pasajero, tus_ganancias, ganancias_antes_imp, 
             tarifa_del_viaje, tarifa_base_total, tarifa_de_servicio, 
             cuota_de_solicitud, tarifa_dinamica, monto_adicional_por_gasolina, 
-            impuesto, impuesto_tipo, ganancias_desp_imp, 
+            impuesto, impuesto_tipo, ganancias_desp_imp, ganancia_real,
             roi_km, calificacion_seleccion, raw_data_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             shiftId,
             aiData.pasajero_nombre || 'App DiDi',
@@ -105,6 +109,7 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
             aiData.impuesto || 0,
             aiData.impuesto_tipo || 'IVA',
             n,
+            profitReal,
             roi,
             calificacion,
             JSON.stringify(aiData)
@@ -194,7 +199,8 @@ router.get('/history', async (req, res) => {
         ganancias_antes_imp, tarifa_del_viaje, tarifa_base_total, 
         tarifa_de_servicio, cuota_de_solicitud, tarifa_dinamica, 
         monto_adicional_por_gasolina, impuesto, impuesto_tipo, 
-        ganancias_desp_imp, roi_km, calificacion_seleccion, created_at 
+        ganancias_desp_imp, ganancia_real, roi_km, calificacion_seleccion, 
+        created_at 
       FROM entries 
       ${dateFilter ? 'WHERE ' + dateFilter : ''} 
       ORDER BY created_at DESC LIMIT 50
