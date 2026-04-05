@@ -85,8 +85,9 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         }
 
         // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática real en el Servidor)
+        // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática Operativa Real)
         const d = Number(aiData.distancia) || 0;
-        const n = Number(aiData.ganancias_desp_imp) || 0;
+        const n = Number(aiData.tus_ganancias) || 0; // Se utiliza el Ingreso Bruto Operacional
         const roi = d > 0 ? (n / d) : 0;
         
         // ⛽️ Costo dinámico: toma el más reciente de fuel_receipts
@@ -163,7 +164,7 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
     const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
     if (fuelRows.length > 0) {
       const latestPrice = Number(fuelRows[0].costo_real_km);
-      await db.execute('UPDATE entries SET ganancia_real = ganancias_desp_imp - (distancia * ?), roi_km = (ganancias_desp_imp - (distancia * ?)) / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END) WHERE shift_id = ?', [latestPrice, latestPrice, shiftId]);
+      await db.execute('UPDATE entries SET ganancia_real = tus_ganancias - (distancia * ?), roi_km = (tus_ganancias - (distancia * ?)) / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END) WHERE shift_id = ?', [latestPrice, latestPrice, shiftId]);
     }
 
     res.json({ success: true, count: results.length });
@@ -225,7 +226,7 @@ router.post('/upload/fuel', upload.array('images', 5), async (req, res) => {
     const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
     if (fuelRows.length > 0) {
       const newCost = Number(fuelRows[0].costo_real_km);
-      await db.execute('UPDATE entries SET ganancia_real = ganancias_desp_imp - (distancia * ?) WHERE DATE(created_at) = CURDATE()', [newCost]);
+      await db.execute('UPDATE entries SET ganancia_real = tus_ganancias - (distancia * ?) WHERE DATE(created_at) = CURDATE()', [newCost]);
     }
 
     res.json({ success: true, aiData });
@@ -311,7 +312,7 @@ router.post('/private_trips', async (req, res) => {
   const targetDate = date || new Date().toISOString().split('T')[0];
 
   try {
-    const [shift] = await db.execute("SELECT id FROM shifts WHERE date = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1", [targetDate]);
+    const [shift] = await db.execute("SELECT id FROM shifts WHERE DATE(start_time) = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1", [targetDate]);
     const shiftId = shift[0] ? shift[0].id : null;
     
     await db.execute(
@@ -332,10 +333,10 @@ router.get('/history', async (req, res) => {
     let didiParams = [];
 
     if (date) {
-      didiQuery += " WHERE DATE(fecha_hora_viaje) = ?";
+      didiQuery += " WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(created_at)) = ?";
       didiParams.push(date);
     } else if (period === 'week') {
-      didiQuery += " WHERE fecha_hora_viaje >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+      didiQuery += " WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(created_at)) >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
     }
 
     const [didiEntries] = await db.execute(didiQuery, didiParams);
@@ -350,7 +351,7 @@ router.get('/history', async (req, res) => {
     const [privateEntries] = await db.execute(privQuery, privParams);
 
     const allEntries = [...didiEntries, ...privateEntries].sort((a, b) => {
-      const dateA = a.tipo === 'didi' ? a.fecha_hora_viaje : b.fecha;
+      const dateA = a.tipo === 'didi' ? a.fecha_hora_viaje : a.fecha;
       const dateB = b.tipo === 'didi' ? b.fecha_hora_viaje : b.fecha;
       return new Date(dateB) - new Date(dateA);
     });
@@ -371,11 +372,13 @@ router.get('/dashboard', async (req, res) => {
     // 1. Datos DiDi
     const [didiRows] = await db.execute(`
       SELECT 
-        COALESCE(SUM(tus_ganancias), 0) as total,
+        COALESCE(SUM(ganancias_desp_imp), 0) as total,
+        COALESCE(SUM(tus_ganancias), 0) as total_operativo,
+        COALESCE(SUM(tarifa_de_servicio) + SUM(cuota_de_solicitud), 0) as cuota_didi,
         COALESCE(SUM(distancia), 0) as km_didi,
-        COALESCE(SUM(CASE WHEN metodo_pago = 'En efectivo' THEN efectivo_recibido ELSE 0 END), 0) as ingresoEfectivo,
-        COALESCE(SUM(CASE WHEN metodo_pago = 'Electrónico' THEN tus_ganancias ELSE 0 END), 0) as ingresoTarjeta
-      FROM entries WHERE DATE(fecha_hora_viaje) = ?
+        COALESCE(SUM(CASE WHEN LOWER(metodo_pago) LIKE '%efectivo%' THEN tus_ganancias ELSE 0 END), 0) as ingresoEfectivo,
+        COALESCE(SUM(ganancias_desp_imp), 0) - COALESCE(SUM(CASE WHEN LOWER(metodo_pago) LIKE '%efectivo%' THEN tus_ganancias ELSE 0 END), 0) as ingresoTarjeta
+      FROM entries WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(created_at)) = ?
     `, [targetDate]);
     const didi = didiRows[0];
 
@@ -388,10 +391,11 @@ router.get('/dashboard', async (req, res) => {
     const fuel = fuelRows[0];
 
     // 4. Turno
-    const [shiftRows] = await db.execute("SELECT initial_odometer, final_odometer FROM shifts WHERE date = ?", [targetDate]);
+    const [shiftRows] = await db.execute("SELECT initial_odometer, final_odometer FROM shifts WHERE DATE(start_time) = ?", [targetDate]);
     const shift = shiftRows[0];
 
     const totalIngresos = Number(didi.total) + Number(priv.total);
+    const totalOperativo = Number(didi.total_operativo) + Number(priv.total);
     const kmProductivos = Number(didi.km_didi) + Number(priv.km_privado);
     const initialOdo = shift?.initial_odometer || 0;
     const finalOdo = shift?.final_odometer || 0;
@@ -400,11 +404,16 @@ router.get('/dashboard', async (req, res) => {
     const costoKm = fuel?.costo_real_km || 0;
     const gastoGasolina = kmTotalesOdo * costoKm;
     const utilidadReal = totalIngresos - gastoGasolina;
-    const roi = kmTotalesOdo > 0 ? (utilidadReal / kmTotalesOdo) : 0;
+    const utilidadOperativa = totalOperativo - gastoGasolina;
+    const roi = kmTotalesOdo > 0 ? (utilidadOperativa / kmTotalesOdo) : 0;
 
     res.json({
       success: true,
       currentDisposition: totalIngresos,
+      ingresoBruto: totalOperativo,
+      impuestos: totalOperativo - totalIngresos,
+      cuotaDidi: Number(didi.cuota_didi || 0),
+      incentivos: 0,
       utilidadReal: utilidadReal,
       gastoGasolina: gastoGasolina,
       roi: roi,

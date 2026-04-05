@@ -15,6 +15,45 @@ CREATE TABLE IF NOT EXISTS shifts (
     profit_indicator ENUM('GREEN', 'RED')
 );
 
+CREATE TABLE IF NOT EXISTS shift_denominations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  shift_id INT NOT NULL,
+  type ENUM('OPEN','CLOSE') NOT NULL,
+  m1 INT DEFAULT 0,
+  m2 INT DEFAULT 0,
+  m5 INT DEFAULT 0,
+  m10 INT DEFAULT 0,
+  b20 INT DEFAULT 0,
+  b50 INT DEFAULT 0,
+  b100 INT DEFAULT 0,
+  b200 INT DEFAULT 0,
+  b500 INT DEFAULT 0,
+  total_calculated DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shift_id) REFERENCES shifts(id)
+);
+
+CREATE TABLE IF NOT EXISTS fuel_receipts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  fecha VARCHAR(30) DEFAULT NULL,
+  gasolinera VARCHAR(150) DEFAULT NULL,
+  producto VARCHAR(50) DEFAULT 'Magna',
+  litros DECIMAL(8,3) DEFAULT NULL,
+  precio_litro DECIMAL(8,4) DEFAULT NULL,
+  importe_sin_iva DECIMAL(10,2) DEFAULT 0.00,
+  importe_iva DECIMAL(10,2) DEFAULT 0.00,
+  total_pagado DECIMAL(10,2) DEFAULT NULL,
+  km_odometro_anterior INT DEFAULT NULL,
+  km_odometro_actual INT DEFAULT NULL,
+  km_recorridos INT GENERATED ALWAYS AS (km_odometro_actual - km_odometro_anterior) STORED,
+  rendimiento_km_l DECIMAL(8,4) GENERATED ALWAYS AS (IF(litros > 0, (km_odometro_actual - km_odometro_anterior) / litros, 0)) STORED,
+  costo_real_km DECIMAL(8,4) GENERATED ALWAYS AS (IF((km_odometro_actual - km_odometro_anterior) > 0, total_pagado / (km_odometro_actual - km_odometro_anterior), 0)) STORED,
+  forma_pago VARCHAR(50) DEFAULT 'Efectivo',
+  raw_data_json TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
 -- 🚖 Tabla de Ingresos (Nombres EXACTOS de DiDi México)
 CREATE TABLE IF NOT EXISTS entries (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -54,6 +93,18 @@ CREATE TABLE IF NOT EXISTS expenses (
     price_per_liter DECIMAL(6,2),
     odometer INT,
     description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shift_id) REFERENCES shifts(id)
+);
+
+-- 🚙 Viajes Privados
+CREATE TABLE IF NOT EXISTS private_trips (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    shift_id INT,
+    fecha DATE,
+    pago DECIMAL(10,2),
+    distancia DECIMAL(6,2),
+    descripcion VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (shift_id) REFERENCES shifts(id)
 );

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0 });
+  const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
   const [activeShift, setActiveShift] = useState(null);
@@ -23,12 +23,16 @@ const Dashboard = () => {
   useEffect(() => {
     setLoading(true);
     checkShift();
-    setStats({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
+    setStats({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
     fetch(`http://localhost:3001/api/dashboard?date=${date}`)
       .then(r => r.json())
       .then(d => {
         if (d.success) setStats({
           currentDisposition: Number(d.currentDisposition || 0),
+          ingresoBruto: Number(d.ingresoBruto || 0),
+          cuotaDidi: Number(d.cuotaDidi || 0),
+          incentivos: Number(d.incentivos || 0),
+          impuestos: Number(d.impuestos || 0),
           utilidadReal: Number(d.utilidadReal || 0),
           gastoGasolina: Number(d.gastoGasolina || 0),
           roi: Number(d.roi || 0),
@@ -65,7 +69,7 @@ const Dashboard = () => {
     }
   };
 
-  const { currentDisposition, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado } = stats;
+  const { currentDisposition, ingresoBruto, cuotaDidi, incentivos, impuestos, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado } = stats;
 
   return (
     <div className="mobile-container">
@@ -154,30 +158,48 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px' }}>
+      {/* 🎭 La Auditoría Maestra (Cascada Didi Desenmascarada) */}
+      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Auditoría de Fondos Inyectados vs Utilitarios</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+        {/* ROW 1 */}
         <div className="card" style={{ marginBottom: '10px', padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '10px' }}>TOTAL INGRESOS</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${currentDisposition.toFixed(2)}</div>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TOTAL INGRESO (FICTICIO)</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${ingresoBruto.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'var(--error-red)', borderLeft: '4px solid var(--error-red)' }}>
-          <div className="card-title" style={{ fontSize: '10px', color: 'var(--error-red)' }}>GASOLINA</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
+        <div className="card" style={{ marginBottom: '10px', padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>INCENTIVOS Y BONOS</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>+${incentivos.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'var(--success-green)', borderLeft: '4px solid var(--success-green)' }}>
-          <div className="card-title" style={{ fontSize: '10px', color: 'var(--success-green)' }}>UTILIDAD</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--success-green)' }}>${utilidadReal.toFixed(2)}</div>
+        
+        {/* ROW 2 */}
+        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'rgba(255,59,48,0.5)', borderLeft: '4px solid var(--error-red)' }}>
+          <div className="card-title" style={{ fontSize: '9px', color: 'var(--error-red)', marginBottom: '2px' }}>TAJADA DE LA APP (DIDI)</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi).toFixed(2)}</div>
+        </div>
+        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'rgba(255,59,48,0.5)', borderLeft: '4px solid var(--error-red)' }}>
+          <div className="card-title" style={{ fontSize: '9px', color: 'var(--error-red)', marginBottom: '2px' }}>IMPUESTOS DICTADOS</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${impuestos.toFixed(2)}</div>
         </div>
       </div>
 
-      {/* 💳 Desglose Efectivo vs Tarjeta */}
+      {/* 💳 Desglose Efectivo vs Tarjeta y Resultados Materiles */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-        <div className="card" style={{ padding: '10px', borderTop: '2px solid var(--success-green)' }}>
+        <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px' }}>COBRADO EN EFECTIVO</div>
           <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoEfectivo.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px', borderTop: '2px solid #3498db' }}>
+        <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px' }}>DEPÓSITO TARJETA</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#3498db' }}>${ingresoTarjeta.toFixed(2)}</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoTarjeta.toFixed(2)}</div>
+        </div>
+
+        <div className="card" style={{ padding: '10px', borderColor: 'rgba(255,59,48,0.5)', borderLeft: '4px solid var(--error-red)' }}>
+          <div className="card-title" style={{ fontSize: '9px', color: 'var(--error-red)', marginBottom: '2px' }}>IMPACTO DE GASOLINA</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
+        </div>
+        <div className="card" style={{ padding: '10px', borderColor: 'var(--success-green)', borderLeft: '4px solid var(--success-green)', backgroundColor: 'rgba(0, 209, 102, 0.05)' }}>
+          <div className="card-title" style={{ fontSize: '9px', color: 'var(--success-green)', marginBottom: '2px' }}>UTILIDAD REAL LIBRE</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--success-green)' }}>${utilidadReal.toFixed(2)}</div>
         </div>
       </div>
 
