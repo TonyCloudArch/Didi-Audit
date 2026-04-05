@@ -5,6 +5,12 @@ const path = require('path');
 const db = require('../config/db');
 const { parseDidiReport, parseFuelReceipt } = require('../services/ai');
 
+// 🛡️ Mazatlán Time Helper (GMT-7)
+const isFutureDate = (dateStr) => {
+  const mztNow = new Date(new Date().getTime() - 7 * 3600 * 1000).toISOString().split('T')[0];
+  return dateStr > mztNow;
+};
+
 // Configuración de Multer para fotos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
@@ -52,6 +58,11 @@ router.post('/shifts/open', async (req, res) => {
 // 💤 Marcar Día como Descansado
 router.post('/shifts/rest', async (req, res) => {
   const { date } = req.body;
+  
+  if (isFutureDate(date)) {
+    return res.status(400).json({ error: 'No puedes marcar como descanso una fecha futura.' });
+  }
+
   console.log(`[REST] Iniciando proceso para fecha: ${date}`);
   try {
     // 🛡️ 1. Verificar que no haya un turno real
@@ -350,7 +361,11 @@ router.post('/shifts/close', async (req, res) => {
 // 📝 Registrar Viaje Privado
 router.post('/private_trips', async (req, res) => {
   const { date, pago, distancia, descripcion } = req.body;
-  const targetDate = date || new Date().toISOString().split('T')[0];
+  const targetDate = date || new Date(new Date().getTime() - 7 * 3600 * 1000).toISOString().split('T')[0];
+
+  if (isFutureDate(targetDate)) {
+    return res.status(400).json({ error: 'No se pueden registrar viajes en fechas futuras.' });
+  }
 
   try {
     const [shift] = await db.execute("SELECT id FROM shifts WHERE DATE(start_time) = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1", [targetDate]);

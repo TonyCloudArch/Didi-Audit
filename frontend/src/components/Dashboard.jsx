@@ -91,6 +91,9 @@ const Dashboard = () => {
   };
 
   const { currentDisposition, ingresoBruto, cuotaDidi, incentivos, impuestos, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado, isRestDay } = stats;
+  const isToday = date === new Date().toLocaleDateString('sv');
+  const isFuture = date > new Date().toLocaleDateString('sv');
+  const isPast = date < new Date().toLocaleDateString('sv');
 
   return (
     <div className="mobile-container">
@@ -104,9 +107,11 @@ const Dashboard = () => {
             <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '2px', marginBottom: 0 }}>
               {isRestDay 
                 ? '🔵 DÍA DESCANSADO'
-                : date !== new Date().toLocaleDateString('sv') 
-                  ? '🔴 HISTÓRICO / CERRADO' 
-                  : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
+                : isFuture
+                  ? '📅 FECHA FUTURA / INACTIVO'
+                  : isPast 
+                    ? '🔴 HISTÓRICO / CERRADO' 
+                    : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
             </p>
           </div>
           <input
@@ -121,34 +126,34 @@ const Dashboard = () => {
       {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
       <div className="card" style={{ 
         padding: '12px', 
-        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : '4px solid #444'), 
+        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : (isFuture ? '4px solid #222' : '4px solid #444')), 
         background: isRestDay ? 'rgba(52,152,219,0.05)' : (activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)'),
-        opacity: (date !== new Date().toLocaleDateString('sv') && !isRestDay) ? 0.4 : 1,
-        filter: (date !== new Date().toLocaleDateString('sv') && !isRestDay) ? 'grayscale(1)' : 'none',
-        pointerEvents: (date !== new Date().toLocaleDateString('sv') && !isRestDay) ? 'none' : 'auto'
+        opacity: (isFuture || (isPast && !isRestDay)) ? 0.4 : 1,
+        filter: (isFuture || (isPast && !isRestDay)) ? 'grayscale(1)' : 'none',
+        pointerEvents: (isFuture || (isPast && !isRestDay)) ? 'none' : 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
-              {isRestDay ? 'DÍA DE DESCANSO' : (date !== new Date().toLocaleDateString('sv') ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO'))}
+              {isRestDay ? 'DÍA DE DESCANSO' : (isFuture ? 'SIN ACTIVIDAD' : (isPast ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')))}
             </div>
           </div>
           <button 
-            onClick={() => !isRestDay && setShowShiftModal(true)}
+            onClick={() => !isRestDay && !isFuture && setShowShiftModal(true)}
             className="btn"
             style={{ 
               fontSize: '11px', 
               padding: '8px 16px', 
               borderRadius: '20px',
-              backgroundColor: isRestDay ? '#1a1a1a' : (date !== new Date().toLocaleDateString('sv') ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)')),
-              color: isRestDay ? '#555' : (date !== new Date().toLocaleDateString('sv') ? '#777' : (activeShift ? '#fff' : '#000')),
+              backgroundColor: (isRestDay || isFuture) ? '#1a1a1a' : (isPast ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)')),
+              color: (isRestDay || isFuture) ? '#555' : (isPast ? '#777' : (activeShift ? '#fff' : '#000')),
               fontWeight: 'bold',
-              border: isRestDay ? '1px dashed #444' : 'none',
-              cursor: (isRestDay || date !== new Date().toLocaleDateString('sv')) ? 'not-allowed' : 'pointer'
+              border: (isRestDay || isFuture) ? '1px dashed #444' : 'none',
+              cursor: (isRestDay || isFuture || isPast) ? 'not-allowed' : 'pointer'
             }}
-            disabled={isRestDay || date !== new Date().toLocaleDateString('sv')}
+            disabled={isRestDay || isFuture || isPast}
           >
-            {isRestDay ? 'Descansando 💤' : (date !== new Date().toLocaleDateString('sv') ? '✔️ Terminado' : (activeShift ? '🚩 Finalizar' : '🚀 Iniciar'))}
+            {isRestDay ? 'Descansando 💤' : isFuture ? 'Próximamente' : (isPast ? '✔️ Terminado' : (activeShift ? '🚩 Finalizar' : '🚀 Iniciar'))}
           </button>
         </div>
       </div>
@@ -218,33 +223,39 @@ const Dashboard = () => {
       )}
 
       {/* 🧠 Inteligencia Financiera (ROI Diario) */}
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      <div className="card" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '10px',
+        opacity: isFuture ? 0.3 : 1
+      }}>
         <div>
           <div className="card-title">Selección IQ (ROI Real)</div>
           <div style={{ 
             fontSize: '28px', 
             fontWeight: 'bold', 
-            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)' 
+            color: isFuture ? '#444' : (roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)')
           }}>
             ${roi.toFixed(2)}<span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/km</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <span style={{ 
-            backgroundColor: roi >= 18 ? 'rgba(0,229,255,0.1)' : roi >= 12 ? 'rgba(0,209,102,0.1)' : roi >= 8 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)', 
-            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)',
+            backgroundColor: isFuture ? '#1a1a1a' : (roi >= 18 ? 'rgba(0,229,255,0.1)' : roi >= 12 ? 'rgba(0,209,102,0.1)' : roi >= 8 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)'), 
+            color: isFuture ? '#444' : (roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)'),
             padding: '4px 8px', 
             borderRadius: '4px', 
             fontSize: '10px', 
             fontWeight: 'bold' 
           }}>
-            {roi >= 18 ? 'SÚPER ÉLITE' : roi >= 12 ? 'EXCELENTE' : roi >= 8 ? 'META' : 'INEFICIENTE'}
+            {isFuture ? 'PLANIFICADO' : (roi >= 18 ? 'SÚPER ÉLITE' : roi >= 12 ? 'EXCELENTE' : roi >= 8 ? 'META' : 'INEFICIENTE')}
           </span>
         </div>
       </div>
 
       {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
-      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '10px', opacity: isFuture ? 0.3 : 1 }}>
         <div className="card-title" style={{ fontSize: '11px', textAlign: 'center' }}>EFICIENCIA DE RUTA (KM TOTALES: {totalKmDidi.toFixed(1)})</div>
         <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
           <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--didi-orange)' }} title="DiDi"></div>
@@ -269,7 +280,7 @@ const Dashboard = () => {
 
       {/* 🎭 La Auditoría Maestra Financiera */}
       <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cascada Financiera de Rentabilidad</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px', marginBottom: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px', marginBottom: '10px', opacity: isFuture ? 0.3 : 1 }}>
         
         {/* ROW 1: Espejismos y Bonos */}
         <div className="card" style={{ padding: '10px' }}>
@@ -314,7 +325,7 @@ const Dashboard = () => {
       </div>
 
 
-      <div className="card" style={{ marginTop: '0' }}>
+      <div className="card" style={{ marginTop: '0', opacity: isFuture ? 0.3 : 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="card-title">Progreso Meta Diaria</div>
           <div style={{ fontSize: '12px', color: 'var(--didi-orange)' }}>${dailyGoal} MXN</div>
@@ -323,18 +334,20 @@ const Dashboard = () => {
           <div style={{ width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, height: '100%', backgroundColor: 'var(--didi-orange)', transition: 'width 0.5s ease' }}></div>
         </div>
         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-          {utilidadReal >= dailyGoal
-            ? '✅ ¡META LOGRADA! Todo lo que entre ahora es ganancia pura.'
-            : `Faltan $${(dailyGoal - utilidadReal).toFixed(2)} para la meta de hoy.`}
+          {isFuture 
+            ? 'Aún no se puede registrar progreso en el futuro.'
+            : utilidadReal >= dailyGoal
+              ? '✅ ¡META LOGRADA! Todo lo que entre ahora es ganancia pura.'
+              : `Faltan $${(dailyGoal - utilidadReal).toFixed(2)} para la meta de hoy.`}
         </p>
       </div>
 
 
 
       {/* Backfill controls */}
-      { !isRestDay && (
-        (date === new Date().toLocaleDateString('sv') && activeShift) || 
-        (date >= '2026-03-16' && date !== new Date().toLocaleDateString('sv') && (ingresoBruto === 0 && gastoGasolina === 0))
+      { !isRestDay && !isFuture && (
+        (isToday && activeShift) || 
+        (date >= '2026-03-16' && isPast && (ingresoBruto === 0 && gastoGasolina === 0))
       ) && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
           <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
@@ -349,7 +362,7 @@ const Dashboard = () => {
       )}
 
       {/* Rest day control */}
-      { !isRestDay && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || date !== new Date().toLocaleDateString('sv'))) && (
+      { !isRestDay && !isFuture && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || isPast)) && (
         <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
           💤 Marcar como Día Descansado
         </button>
