@@ -127,88 +127,77 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         const paths = [req.files[i].path];
         if (req.files[i + 1]) paths.push(req.files[i + 1].path);
 
-        // 1. IA extrae datos del par de imágenes
+        // 1. IA DETERMINA QUÉ ES (Vía Lector Mágico Universal)
         const aiData = await parseDidiReport(paths);
 
-        // 🛡️ Filtro de Seguridad: Solo procesar viajes auténticos
-        if (aiData.is_valid_didi_ride === false) {
-          console.warn('⚠️ Imagen ignorada: No se detectó un resumen de viaje de DiDi válido.');
+        if (!aiData.is_valid) {
+          console.warn('⚠️ Imagen ignorada: No se detectó un formato válido.');
           continue;
         }
 
-        // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática real en el Servidor)
-        // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática Operativa Real)
-        const d = Number(aiData.distancia) || 0;
-        const n = Number(aiData.tus_ganancias) || 0; 
-        const n_neto = Number(aiData.ganancias_desp_imp) || n; // Neto DiDi
-        
-        // ⛽️ Costo dinámico de gas
-        const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
-        const gasCostPerKm = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27; 
-        
-        const gasTotal = d * gasCostPerKm;
-        const profitReal = n_neto - gasTotal; // Utilidad final en mano (dinero real)
-        
-        // ROI de Ingreso Neto (Pago / KM) para escala de colores $8+
-        const roi = d > 0 ? (n_neto / d) : 0;
+        if (aiData.tipo_documento === 'gasolina') {
+          // ⛽️ RAMA DE COMBUSTIBLE (Auto-detección)
+          const total = Number(aiData.total_pagado) || 0;
+          const litros = Number(aiData.litros) || 0;
+          const precio = Number(aiData.precio_litro) || 0;
+          const kmAct = Number(aiData.km_odometro_actual) || 0;
 
-        // El Juez Mazatleco decide:
-        let calificacion = "Ineficiente";
-        if (roi >= 20) calificacion = "Boleto Dorado";
-        else if (roi >= 12) calificacion = "Súper Élite";
-        else if (roi >= 8) calificacion = "Eficiente";
-        else if (roi >= 6) calificacion = "Pobre";
-        else calificacion = "Fatal";
-        
+          const [lastRec] = await db.execute('SELECT km_odometro_actual FROM fuel_receipts ORDER BY id DESC LIMIT 1');
+          const kmAnt = lastRec[0]?.km_odometro_actual || (kmAct - 300);
+          const distRecorrida = kmAct - kmAnt;
+          const rendimiento = distRecorrida > 0 ? distRecorrida / litros : 0;
+          const costoRealKm = distRecorrida > 0 ? total / distRecorrida : 0;
 
-        // 2. Guardar en BD con nombres EXACTOS de DiDi (y cálculos confiables)
-        await db.execute(
-          `INSERT INTO entries (
-            shift_id, pasajero_nombre, distancia, duracion, 
-            fecha_hora_viaje, origen_direccion, destino_direccion, 
-            tipo_vehiculo, metodo_pago, efectivo_recibido, 
-            pagado_por_el_pasajero, tus_ganancias, ganancias_antes_imp, 
-            tarifa_del_viaje, tarifa_base_total, tarifa_de_servicio, 
-            cuota_de_solicitud, tarifa_dinamica, monto_adicional_por_gasolina, 
-            impuesto, impuesto_tipo, ganancias_desp_imp, ganancia_real,
-            roi_km, calificacion_seleccion, raw_data_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            shiftId,
-            aiData.pasajero_nombre || 'App DiDi',
-            d,
-            aiData.duracion || '-',
-            aiData.fecha_hora_viaje || '-',
-            aiData.origen_direccion || '-',
-            aiData.destino_direccion || '-',
-            aiData.tipo_vehiculo || '-',
-            aiData.metodo_pago || 'Desconocido',
-            aiData.efectivo_recibido || 0,
-            aiData.pagado_por_el_pasajero || 0,
-            aiData.tus_ganancias || 0,
-            aiData.ganancias_antes_imp || 0,
-            aiData.tarifa_del_viaje || 0,
-            aiData.tarifa_base_total || 0,
-            aiData.tarifa_de_servicio || 0,
-            aiData.cuota_de_solicitud || 0,
-            aiData.tarifa_dinamica || 'No aplica',
-            aiData.monto_adicional_por_gasolina || 0,
-            aiData.impuesto || 0,
-            aiData.impuesto_tipo || 'IVA',
-            n,
-            profitReal,
-            roi,
-            calificacion,
-            JSON.stringify(aiData)
-          ]
-        );
-        viajesProcesados++;
-      } catch (err) {
-        console.error("Error en par iterativo:", err.message);
-        fallbackError = err.message;
-        if (err.message.includes("429") || err.message.includes("Rate limit") || err.message.includes("Insufficient quota")) {
-          break;
+          await db.execute(
+            'INSERT INTO fuel_receipts (total_pagado, litros, precio_litro, km_odometro_actual, km_anterior, km_recorridos, rendimiento_km_l, costo_real_km, gasolinera) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [total, litros, precio, kmAct, kmAnt, distRecorrida, rendimiento, costoRealKm, aiData.gasolinera || 'Gasolinera']
+          );
+          viajesProcesados++; // Lo contamos como "elemento procesado"
+        } 
+        else if (aiData.tipo_documento === 'viaje') {
+          // 🚗 RAMA DE VIAJES (Auto-detección)
+          const d = Number(aiData.distancia) || 0;
+          const n = Number(aiData.tus_ganancias) || 0; 
+          const n_neto = Number(aiData.ganancias_desp_imp) || n; 
+          
+          const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
+          const gasCostPerKm = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27; 
+          
+          const gasTotal = d * gasCostPerKm;
+          const profitReal = n_neto - gasTotal; 
+          const roi = d > 0 ? (n_neto / d) : 0;
+
+          let calificacion = "Ineficiente";
+          if (roi >= 20) calificacion = "Boleto Dorado";
+          else if (roi >= 12) calificacion = "Súper Élite";
+          else if (roi >= 8) calificacion = "Eficiente";
+          else if (roi >= 6) calificacion = "Pobre";
+          else calificacion = "Fatal";
+
+          await db.execute(
+            `INSERT INTO entries (
+              shift_id, pasajero_nombre, distancia, duracion, 
+              fecha_hora_viaje, origen_direccion, destino_direccion, 
+              tipo_vehiculo, metodo_pago, efectivo_recibido, 
+              pagado_por_el_pasajero, tus_ganancias, ganancias_antes_imp, 
+              tarifa_del_viaje, tarifa_base_total, tarifa_de_servicio, 
+              cuota_de_solicitud, tarifa_dinamica, monto_adicional_por_gasolina, 
+              impuesto, ganancias_desp_imp, ganancia_real,
+              roi_km, calificacion_seleccion, raw_data_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              shiftId, aiData.pasajero_nombre || 'App DiDi', d, aiData.duracion || '-',
+              aiData.fecha_hora_viaje || '-', aiData.origen_direccion || '-', aiData.destino_direccion || '-',
+              aiData.tipo_vehiculo || '-', aiData.metodo_pago || 'Desconocido', 0,
+              aiData.pagado_por_el_pasajero || 0, aiData.tus_ganancias || 0, 0,
+              0, 0, 0, 0, 'No aplica', 0, 0, n_neto, profitReal, roi, calificacion, JSON.stringify(aiData)
+            ]
+          );
+          viajesProcesados++;
         }
+      } catch (err) {
+        console.error("Error en Lector Mágico Universal:", err.message);
+        fallbackError = err.message;
       }
     }
 

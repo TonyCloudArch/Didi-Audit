@@ -30,8 +30,13 @@ async function parseDidiReport(imagePaths) {
         content: `Eres el Auditor Maestro de Didi Audit AI. 
         Tu objetivo es extraer datos de capturas de pantalla de DiDi México con precisión absoluta.
         
-        Debes devolver UNICAMENTE un objeto JSON con esta estructura exacta:
+        Debes analizar las imágenes y determinar si se trata de un "VIAJE" de DiDi o una "RECARGA" de gasolina (ticket + odómetro).
+        
+        Devuelve UNICAMENTE un objeto JSON con esta estructura:
         {
+          "tipo_documento": "viaje" | "gasolina" | "desconocido",
+          
+          // Si es un VIAJE:
           "pasajero_nombre": "Nombre del pasajero",
           "distancia": 0.0,
           "duracion": "Ej: 14m 24s",
@@ -40,28 +45,25 @@ async function parseDidiReport(imagePaths) {
           "destino_direccion": "Dirección completa punto naranja",
           "tipo_vehiculo": "Ej: Express",
           "metodo_pago": "Efectivo/Tarjeta",
-          "efectivo_recibido": 0.0,
           "pagado_por_el_pasajero": 0.0,
           "tus_ganancias": 0.0,
-          "ganancias_antes_imp": 0.0,
-          "tarifa_del_viaje": 0.0,
-          "tarifa_de_servicio": 0.0,
-          "cuota_de_solicitud": 0.0,
-          "tarifa_dinamica": "No aplica / Ej: 1.2x",
-          "monto_adicional_por_gasolina": 0.0,
-          "tarifa_base_total": 0.0,
-          "impuesto": 0.0,
-          "impuesto_tipo": "Ej: Impuesto al Valor Agregado",
           "ganancias_desp_imp": 0.0,
-          "is_valid_didi_ride": true
+          
+          // Si es una RECARGA de gasolina:
+          "gasolinera": "Nombre de la gasolinera",
+          "total_pagado": 0.0,
+          "litros": 0.0,
+          "precio_litro": 0.0,
+          "km_odometro_actual": 0,
+          
+          "is_valid": true
         }
 
         Instrucciones Especiales:
-        - "is_valid_didi_ride": Si las imágenes NO corresponden a un resumen de viaje de DiDi México, pon este valor en false.
-        - "tarifa_dinamica": Busca menciones de multiplicadores o si explícitamente dice que incluye tarifa dinámica. Si no hay, pon "No aplica".
-        - "impuesto_tipo": Extrae el texto descriptivo del impuesto si aparece (Ej: IVA, ISR, etc.).
-        - "tarifa_base_total": Es el monto "Tarifa total" que aparece dentro del desglose de Tarifa del viaje.
-        - Tu única misión es extraer los datos tal cual aparecen en las etiquetas de DiDi. 
+        - "tipo_documento": Identifica si es un resumen de viaje de DiDi México o un ticket/odómetro de combustible.
+        - "is_valid": Solo false si la imagen no es ninguna de las anteriores.
+        - Sé extremadamente preciso con los montos de "tus_ganancias" o "total_pagado".
+        - Si es gasolina, busca el total pagado, los litros y el precio por litro en el ticket. Del odómetro extrae el kilometraje actual total.
         `
       },
       {

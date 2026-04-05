@@ -69,47 +69,7 @@ const Cargas = () => {
         </div>
       )}
 
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center' }}>Registrar Nueva Carga</div>
-
-        <div style={{ position: 'relative', height: '120px', border: '2px dashed #444', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {files.length > 0 ? (
-            <div style={{ textAlign: 'center' }}>
-              <Fuel size={32} color="var(--success-green)" />
-              <div style={{ fontSize: '12px', marginTop: '8px' }}>{files.length} foto(s) lista(s)</div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center' }}>
-              <Fuel size={32} color="var(--didi-orange)" />
-              <div style={{ fontSize: '11px', color: '#888', marginTop: '8px' }}>Ticket + Odómetro (máx 5 fotos)</div>
-            </div>
-          )}
-          <input type="file" accept="image/*" multiple onChange={(e) => setFiles(prev => [...prev, ...Array.from(e.target.files)])} style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
-        </div>
-
-        {files.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-            {files.map((file, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1a1a1a', padding: '8px 12px', borderRadius: '6px', border: '1px solid #333' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Fuel size={14} color="var(--success-green)" />
-                  <span style={{ fontSize: '11px', color: '#eee', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-                </div>
-                <button onClick={() => setFiles(files.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: 'var(--error-red)', cursor: 'pointer', padding: '4px' }}>
-                  <AlertCircle size={16} />
-                </button>
-              </div>
-            ))}
-            <button onClick={() => setFiles([])} className="btn btn-secondary" style={{ fontSize: '10px', padding: '5px' }}>Limpiar Selección</button>
-          </div>
-        )}
-
-        {progress && <p style={{ color: 'var(--didi-orange)', fontSize: '12px', textAlign: 'center' }}>{progress}</p>}
-
-        <button className="btn btn-primary" disabled={files.length === 0 || loading} onClick={handleUpload}>
-          {loading ? 'Procesando con IA...' : '⛽ Registrar Carga'}
-        </button>
-      </div>
+      {/* HISTORIAL SECCIÓN ÚNICAMENTE */}
 
       <div style={{ marginTop: '20px' }}>
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-muted)' }}>HISTORIAL DE CARGAS</div>

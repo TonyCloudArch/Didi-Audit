@@ -347,17 +347,12 @@ const Dashboard = () => {
 
       {/* Backfill controls */}
       { !isRestDay && !isFuture && (
-        (isToday && activeShift) || 
-        (date >= '2026-03-16' && isPast && (ingresoBruto === 0 && gastoGasolina === 0))
+        (isToday && activeShift)
       ) && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-          <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
-            <Camera size={32} />
-            Lector Mágico
-          </Link>
-          <Link to={`/cubo?date=${date}`} className="btn btn-secondary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
-            <Fuel size={32} />
-            Cargas de Gasolina
+        <div style={{ marginTop: '10px' }}>
+          <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ flexDirection: 'column', height: '110px', fontSize: '15px', width: '100%', gap: '10px' }}>
+            <Camera size={38} />
+            Lector Mágico (Auditoría IA)
           </Link>
         </div>
       )}

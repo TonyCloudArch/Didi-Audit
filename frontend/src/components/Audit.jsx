@@ -9,7 +9,7 @@ const Audit = () => {
   const handleUpload = async () => {
     if (files.length === 0) return;
     setLoading(true);
-    setProgress(`Procesando lote de ${files.length} fotos...`);
+    setProgress(`Digitalizando ${files.length} fotos con IA...`);
 
     const formData = new FormData();
     files.forEach(f => formData.append('images', f));
@@ -21,34 +21,39 @@ const Audit = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setProgress(`¡Éxito! ${data.count} viajes registrados en el Historial.`);
+        setProgress(`¡Éxito! Viajes y/o Tickets registrados en el Historial.`);
         setFiles([]);
       } else {
-        setProgress('Error en la auditoría.');
+        setProgress(`Error: ${data.error || 'Fallo en la auditoría'}`);
       }
     } catch (e) {
-      setProgress('Error de conexión.');
+      setProgress('Error de conexión con el servidor de IA.');
     }
     setLoading(false);
   };
 
   return (
     <div className="mobile-container">
-      <div className="header">
-        <h1>Lector Mágico (Lote)</h1>
+      <div className="header" style={{ textAlign: 'center' }}>
+        <h1>Lector Mágico Universal (IA)</h1>
       </div>
 
-      <div className="card" style={{ height: '350px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #444', position: 'relative' }}>
+      <div className="card" style={{ height: '380px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #444', position: 'relative' }}>
         {files.length > 0 ? (
           <div style={{ textAlign: 'center' }}>
             <Camera size={64} color="var(--success-green)" />
-            <h2 style={{ marginTop: '10px' }}>{files.length} Fotos Listas</h2>
-            <p style={{ color: 'var(--text-muted)' }}>Revisión de múltiples viajes.</p>
+            <h2 style={{ marginTop: '10px' }}>{files.length} Archivos Listos</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>La IA clasificará automáticamente cada foto.</p>
           </div>
         ) : (
           <>
             <Camera size={64} color="var(--didi-orange)" />
-            <p style={{ color: '#888', marginTop: '16px', textAlign: 'center', padding: '0 20px' }}>Sube hasta 60 capturas de DiDi (Ej: 30 viajes x 2 fotos)</p>
+            <p style={{ color: '#888', marginTop: '16px', textAlign: 'center', padding: '0 20px', fontSize: '13px' }}>
+              Sube capturas de DiDi, tickets de gas o fotos de odómetro mezcladas.
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '10px' }}>
+              El sistema detectará automáticamente el tipo de dato.
+            </p>
           </>
         )}
         <input
@@ -60,14 +65,14 @@ const Audit = () => {
         />
       </div>
 
-      {progress && <p style={{ color: 'var(--didi-orange)', marginTop: '10px', textAlign: 'center', fontSize: '12px' }}>{progress}</p>}
+      {progress && <p style={{ color: 'var(--didi-orange)', marginTop: '15px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>{progress}</p>}
 
-      <button className="btn btn-primary" style={{ marginTop: '20px' }} disabled={files.length === 0 || loading} onClick={handleUpload}>
-        {loading ? 'Auditando Datos...' : `Procesar Lote con IA`}
+      <button className="btn btn-primary" style={{ marginTop: '20px', width: '100%', fontWeight: 'bold' }} disabled={files.length === 0 || loading} onClick={handleUpload}>
+        {loading ? 'ANALIZANDO CON IA...' : `DIGITALIZAR CONTENIDO`}
       </button>
 
       {files.length > 0 && (
-        <button className="btn btn-secondary" style={{ marginTop: '10px' }} onClick={() => { setFiles([]); setProgress(''); }}>
+        <button className="btn btn-secondary" style={{ marginTop: '10px', width: '100%' }} onClick={() => { setFiles([]); setProgress(''); }}>
           Limpiar Selección
         </button>
       )}
