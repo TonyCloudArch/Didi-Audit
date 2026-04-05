@@ -52,20 +52,45 @@ router.post('/shifts/open', async (req, res) => {
 // 💤 Marcar Día como Descansado
 router.post('/shifts/rest', async (req, res) => {
   const { date } = req.body;
+  console.log(`[REST] Iniciando proceso para fecha: ${date}`);
   try {
-    // Verificar que no haya un turno ya real ese día (que no sea -1)
-    const [existing] = await db.execute('SELECT id FROM shifts WHERE DATE(start_time) = ?', [date]);
-    if (existing.length > 0) {
-      return res.status(400).json({ error: 'Ya existe actividad registrada en este día.' });
+    // 🛡️ 1. Verificar que no haya un turno real
+    console.log('[REST] Verificando turnos...');
+    const [existingShifts] = await db.execute('SELECT id FROM shifts WHERE DATE(start_time) = ? AND initial_odometer != -1', [date]);
+    if (existingShifts.length > 0) {
+      console.log('[REST] Error: Ya hay un turno real.');
+      return res.status(400).json({ error: 'Ya hay un turno laboral registrado en este día.' });
     }
 
+    // 🛡️ 2. Verificar que no haya viajes ya cargados (DiDi o Privados)
+    console.log('[REST] Verificando viajes...');
+    // Optimizamos consulta para evitar STR_TO_DATE en toda la tabla si es posible, o al menos depuramos si falla
+    const [existingEntries] = await db.execute("SELECT id FROM entries WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(created_at)) = ?", [date]);
+    const [existingPriv] = await db.execute("SELECT id FROM private_trips WHERE fecha = ?", [date]);
+    if (existingEntries.length > 0 || existingPriv.length > 0) {
+      console.log('[REST] Error: Hay viajes cargados.');
+      return res.status(400).json({ error: 'No se puede marcar como descanso: Detectamos viajes registrados en esta fecha.' });
+    }
+
+    // 🛡️ 3. Verificar que no haya tickets de gasolina
+    console.log('[REST] Verificando gasolina...');
+    const [existingFuel] = await db.execute("SELECT id FROM fuel_receipts WHERE DATE(fecha) = ? OR DATE(created_at) = ?", [date, date]);
+    if (existingFuel.length > 0) {
+      console.log('[REST] Error: Hay gasolina.');
+      return res.status(400).json({ error: 'Hay cargas de gasolina en este día. No es posible marcar descanso.' });
+    }
+
+    // ✅ Si todo está vacío, procedemos al registro del descanso
+    console.log('[REST] Registrando descanso...');
     await db.execute(
       'INSERT INTO shifts (start_time, end_time, initial_odometer, final_odometer, status) VALUES (?, ?, -1, -1, "CLOSED")',
       [`${date} 12:00:00`, `${date} 12:00:00`]
     );
 
+    console.log('[REST] ÉXITO.');
     res.json({ success: true, message: 'Día marcado como descansado.' });
   } catch (err) {
+    console.error("[REST] ERROR FATAL:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -444,7 +469,7 @@ router.get('/dashboard', async (req, res) => {
       km_privado: Number(priv.km_privado),
       ingresoEfectivo: Number(didi.ingresoEfectivo),
       ingresoTarjeta: Number(didi.ingresoTarjeta),
-      shift_initial_odometer: Number(shift?.initial_odometer),
+      shift_initial_odometer: shift ? Number(shift.initial_odometer) : null,
       shift_status: shift?.status || null
     });
   } catch (err) {

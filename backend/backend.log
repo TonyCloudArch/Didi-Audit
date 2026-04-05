@@ -1,4 +1,0 @@
-◇ injecting env (6) from .env // tip: ⌘ override existing { override: true }
-◇ injecting env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-◇ injecting env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-🚀 Auditor Maestro en servicio puerto: 3001
