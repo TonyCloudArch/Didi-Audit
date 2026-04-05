@@ -149,15 +149,10 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
 
         // El Juez Mazatleco decide:
         let calificacion = "Ineficiente";
-        if (roi >= 18) calificacion = "Súper Élite";
-        else if (roi >= 12) calificacion = "Excelente";
-        else {
-          if (d < 4) {
-            if (n >= 30) calificacion = "Meta";
-          } else {
-            if (roi >= 8) calificacion = "Meta";
-          }
-        }
+        if (roi >= 20) calificacion = "Boleto Dorado";
+        else if (roi >= 12) calificacion = "Súper Élite";
+        else if (roi >= 8) calificacion = "Eficiente";
+        else calificacion = "Ineficiente";
 
         // 2. Guardar en BD con nombres EXACTOS de DiDi (y cálculos confiables)
         await db.execute(
@@ -217,7 +212,13 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
     await db.execute(
       `UPDATE entries 
        SET ganancia_real = tus_ganancias - (distancia * ?), 
-           roi_km = tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END) 
+           roi_km = tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END),
+           calificacion_seleccion = CASE 
+             WHEN (tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END)) >= 20 THEN 'Boleto Dorado'
+             WHEN (tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END)) >= 12 THEN 'Súper Élite'
+             WHEN (tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END)) >= 8 THEN 'Eficiente'
+             ELSE 'Ineficiente'
+           END
        WHERE shift_id = ?`, 
       [latestPrice, shiftId]
     );

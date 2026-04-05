@@ -66,10 +66,36 @@ const HistoryView = () => {
     }
   };
 
+  const totalIncomeAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'privado' ? curr.pago : curr.ganancias_desp_imp), 0);
+  const totalKmAll = entries.reduce((acc, curr) => acc + parseFloat(curr.distancia), 0);
+  const avgEfficiencyAll = totalKmAll > 0 ? (totalIncomeAll / totalKmAll) : 0;
+
   return (
     <div className="mobile-container">
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <h1>VIAJES</h1>
+      <div className="header" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '20px',
+        position: 'relative' // Para centrar el absoluto
+      }}>
+        <h1 style={{ margin: 0 }}>VIAJES</h1>
+        
+        {entries.length > 0 && (
+          <div style={{ 
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '24px', 
+            fontWeight: 900, 
+            color: avgEfficiencyAll >= 20 ? '#FFD700' : (avgEfficiencyAll >= 12 ? '#00e5ff' : (avgEfficiencyAll >= 8 ? 'var(--success-green)' : 'var(--error-red)')),
+            textShadow: avgEfficiencyAll >= 20 ? '0 0 15px rgba(255,215,0,0.5)' : 'none'
+          }}>
+            {avgEfficiencyAll >= 20 && <span style={{ marginRight: '6px' }}>🎫</span>}
+            ${avgEfficiencyAll.toFixed(2)}
+          </div>
+        )}
+
         <input
           type="date"
           value={date}
@@ -118,12 +144,17 @@ const HistoryView = () => {
         ) : (
           entries.map((entry) => {
             const isPrivate = entry.tipo === 'privado';
-            const isBad = !isPrivate && (entry.calificacion_seleccion === 'Ineficiente' || entry.calificacion_seleccion === 'Bajo');
+            const isGolden = !isPrivate && entry.calificacion_seleccion === 'Boleto Dorado';
+            const isSuperElite = !isPrivate && entry.calificacion_seleccion === 'Súper Élite';
+            const isBad = !isPrivate && entry.calificacion_seleccion === 'Ineficiente';
             const isExpanded = expandedIds.includes(entry.id + (entry.tipo || ''));
+            
+            const statusColor = isPrivate ? '#3498db' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isBad ? 'var(--error-red)' : 'var(--success-green)')));
+
             return (
               <div key={entry.id + (entry.tipo || '')} onClick={() => toggleExpand(entry.id + (entry.tipo || ''))} className="card" style={{
                 cursor: 'pointer',
-                borderLeft: isPrivate ? '4px solid #3498db' : (isBad ? '4px solid var(--error-red)' : '4px solid var(--success-green)'),
+                borderLeft: `4px solid ${statusColor}`,
                 transition: 'all 0.3s ease',
                 padding: isExpanded ? '20px' : '15px'
               }}>
@@ -143,7 +174,7 @@ const HistoryView = () => {
                   {!isPrivate && (
                     <div style={{ flex: 1, textAlign: 'center' }}>
                       <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', letterSpacing: '1px' }}>EFICIENCIA</div>
-                      <div style={{ fontSize: '15px', color: isBad ? 'var(--error-red)' : 'var(--success-green)' }}>
+                      <div style={{ fontSize: '15px', color: statusColor, fontWeight: isGolden ? '900' : 'normal' }}>
                         ${parseFloat(entry.roi_km).toFixed(2)}
                       </div>
                     </div>
