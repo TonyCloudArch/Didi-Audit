@@ -305,82 +305,118 @@ router.post('/shifts/close', async (req, res) => {
   }
 });
 
+// 📝 Registrar Viaje Privado
+router.post('/private_trips', async (req, res) => {
+  const { date, pago, distancia, descripcion } = req.body;
+  const targetDate = date || new Date().toISOString().split('T')[0];
+
+  try {
+    const [shift] = await db.execute("SELECT id FROM shifts WHERE date = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1", [targetDate]);
+    const shiftId = shift[0] ? shift[0].id : null;
+    
+    await db.execute(
+      "INSERT INTO private_trips (shift_id, fecha, pago, distancia, descripcion) VALUES (?, ?, ?, ?, ?)",
+      [shiftId, targetDate, pago, distancia, descripcion || 'Viaje Privado']
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 📜 5. Historial de Decisiones (Diario/Semanal/Mensual)
 router.get('/history', async (req, res) => {
-  const { period, date: queryDate } = req.query; // 'day', 'week', 'month', 'YYYY-MM-DD'
+  const { period, date } = req.query;
   try {
-    const localDateExpr = 'DATE(CONVERT_TZ(created_at, "+00:00", "-07:00"))';
-    const todayExpr = 'DATE(CONVERT_TZ(NOW(), "+00:00", "-07:00"))';
+    let didiQuery = "SELECT *, 'didi' as tipo FROM entries";
+    let didiParams = [];
 
-    let dateFilter = '';
-    let params = [];
-
-    if (queryDate) {
-      dateFilter = `${localDateExpr} = ? OR DATE(fecha_hora_viaje) = ?`;
-      params = [queryDate, queryDate];
-    } else if (period === 'day') {
-      dateFilter = `${localDateExpr} = ${todayExpr}`;
+    if (date) {
+      didiQuery += " WHERE DATE(fecha_hora_viaje) = ?";
+      didiParams.push(date);
     } else if (period === 'week') {
-      dateFilter = `YEARWEEK(CONVERT_TZ(created_at, "+00:00", "-07:00"), 1) = YEARWEEK(CONVERT_TZ(NOW(), "+00:00", "-07:00"), 1)`;
-    } else if (period === 'month') {
-      dateFilter = `MONTH(CONVERT_TZ(created_at, "+00:00", "-07:00")) = MONTH(CONVERT_TZ(NOW(), "+00:00", "-07:00")) AND YEAR(CONVERT_TZ(created_at, "+00:00", "-07:00")) = YEAR(CONVERT_TZ(NOW(), "+00:00", "-07:00"))`;
+      didiQuery += " WHERE fecha_hora_viaje >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
     }
 
-    const query = `
-      SELECT 
-        id, pasajero_nombre, distancia, duracion, fecha_hora_viaje, 
-        origen_direccion, destino_direccion, tipo_vehiculo, metodo_pago, 
-        efectivo_recibido, pagado_por_el_pasajero, tus_ganancias, 
-        ganancias_antes_imp, tarifa_del_viaje, tarifa_base_total, 
-        tarifa_de_servicio, cuota_de_solicitud, tarifa_dinamica, 
-        monto_adicional_por_gasolina, impuesto, impuesto_tipo, 
-        ganancias_desp_imp, ganancia_real, roi_km, calificacion_seleccion, 
-        created_at 
-      FROM entries 
-      ${dateFilter ? 'WHERE ' + dateFilter : ''} 
-      ORDER BY created_at DESC LIMIT 100
-    `;
-    const [entries] = await db.execute(query, params);
-    res.json({ success: true, entries });
+    const [didiEntries] = await db.execute(didiQuery, didiParams);
+
+    let privQuery = "SELECT *, 'privado' as tipo FROM private_trips";
+    let privParams = [];
+    if (date) {
+      privQuery += " WHERE fecha = ?";
+      privParams.push(date);
+    }
+
+    const [privateEntries] = await db.execute(privQuery, privParams);
+
+    const allEntries = [...didiEntries, ...privateEntries].sort((a, b) => {
+      const dateA = a.tipo === 'didi' ? a.fecha_hora_viaje : b.fecha;
+      const dateB = b.tipo === 'didi' ? b.fecha_hora_viaje : b.fecha;
+      return new Date(dateB) - new Date(dateA);
+    });
+
+    res.json({ success: true, entries: allEntries });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // 📊 6. Datos del Dashboard (Resumen del Día)
 router.get('/dashboard', async (req, res) => {
-  const queryDate = req.query.date; // YYYY-MM-DD
+  const queryDate = req.query.date;
   try {
     // ⏰ Destino: Mazatlán (GMT-7)
-    // Si no hay fecha en el query, calculamos la fecha actual en Mazatlán desde el servidor
     const targetDate = queryDate || new Date(new Date().getTime() - 7 * 3600 * 1000).toISOString().split('T')[0];
 
-    const [stats] = await db.execute(`
+    // 1. Datos DiDi
+    const [didiRows] = await db.execute(`
       SELECT 
-        COALESCE(SUM(ganancias_desp_imp), 0) as currentDisposition,
-        COALESCE(SUM(ganancia_real), 0) as utilidadReal,
-        (COALESCE(SUM(ganancias_desp_imp), 0) - COALESCE(SUM(ganancia_real), 0)) as gastoGasolina,
-        COALESCE(AVG(roi_km), 0) as roiPromedio,
-        COALESCE(SUM(distancia), 0) as total_km,
+        COALESCE(SUM(tus_ganancias), 0) as total,
+        COALESCE(SUM(distancia), 0) as km_didi,
         COALESCE(SUM(CASE WHEN metodo_pago = 'En efectivo' THEN efectivo_recibido ELSE 0 END), 0) as ingresoEfectivo,
         COALESCE(SUM(CASE WHEN metodo_pago = 'Electrónico' THEN tus_ganancias ELSE 0 END), 0) as ingresoTarjeta
-      FROM entries 
-      WHERE (DATE(CONVERT_TZ(created_at, "+00:00", "-07:00")) = ? 
-          OR DATE(fecha_hora_viaje) = ?)
-    `, [targetDate, targetDate]);
+      FROM entries WHERE DATE(fecha_hora_viaje) = ?
+    `, [targetDate]);
+    const didi = didiRows[0];
 
-    const result = stats[0] || {};
+    // 2. Datos Privados
+    const [privRows] = await db.execute(`SELECT COALESCE(SUM(pago), 0) as total, COALESCE(SUM(distancia), 0) as km_privado FROM private_trips WHERE fecha = ?`, [targetDate]);
+    const priv = privRows[0];
+
+    // 3. Gasolina
+    const [fuelRows] = await db.execute("SELECT costo_real_km FROM fuel_receipts ORDER BY created_at DESC LIMIT 1");
+    const fuel = fuelRows[0];
+
+    // 4. Turno
+    const [shiftRows] = await db.execute("SELECT initial_odometer, final_odometer FROM shifts WHERE date = ?", [targetDate]);
+    const shift = shiftRows[0];
+
+    const totalIngresos = Number(didi.total) + Number(priv.total);
+    const kmProductivos = Number(didi.km_didi) + Number(priv.km_privado);
+    const initialOdo = shift?.initial_odometer || 0;
+    const finalOdo = shift?.final_odometer || 0;
+    const kmTotalesOdo = finalOdo > 0 ? (finalOdo - initialOdo) : kmProductivos;
+    const kmMuertos = kmTotalesOdo > kmProductivos ? (kmTotalesOdo - kmProductivos) : 0;
+    const costoKm = fuel?.costo_real_km || 0;
+    const gastoGasolina = kmTotalesOdo * costoKm;
+    const utilidadReal = totalIngresos - gastoGasolina;
+    const roi = kmTotalesOdo > 0 ? (utilidadReal / kmTotalesOdo) : 0;
+
     res.json({
       success: true,
-      currentDisposition: Number(result.currentDisposition || 0),
-      utilidadReal: Number(result.utilidadReal || 0),
-      gastoGasolina: Number(result.gastoGasolina || 0),
-      roi: Number(result.roiPromedio || 0),
-      totalKmDidi: Number(result.total_km || 0),
-      ingresoEfectivo: Number(result.ingresoEfectivo || 0),
-      ingresoTarjeta: Number(result.ingresoTarjeta || 0)
+      currentDisposition: totalIngresos,
+      utilidadReal: utilidadReal,
+      gastoGasolina: gastoGasolina,
+      roi: roi,
+      total_km: kmTotalesOdo,
+      km_muertos: kmMuertos,
+      km_didi: Number(didi.km_didi),
+      km_privado: Number(priv.km_privado),
+      ingresoEfectivo: Number(didi.ingresoEfectivo),
+      ingresoTarjeta: Number(didi.ingresoTarjeta)
     });
   } catch (err) {
+    console.error("Dashboard error:", err);
     res.status(500).json({ error: err.message });
   }
 });

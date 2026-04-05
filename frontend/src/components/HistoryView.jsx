@@ -7,25 +7,32 @@ const HistoryView = () => {
   const [period, setPeriod] = useState('day');
   const [loading, setLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState([]);
+  const [privateMode, setPrivateMode] = useState(false);
+  const [privEntry, setPrivEntry] = useState({ pago: '', distancia: '', descripcion: '' });
+
+  const fetchHistory = async () => {
+    setLoading(true);
+    setEntries([]);
+    try {
+      const url = date ? `http://localhost:3001/api/history?date=${date}` : `http://localhost:3001/api/history?period=${period}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        const allEntries = [...data.entries].sort((a, b) => {
+          const dateA = a.tipo === 'didi' ? a.fecha_hora_viaje : a.fecha;
+          const dateB = b.tipo === 'didi' ? b.fecha_hora_viaje : b.fecha;
+          return new Date(dateB) - new Date(dateA);
+        });
+        setEntries(allEntries);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      setLoading(true);
-      setEntries([]);
-      try {
-        const url = date ? `http://localhost:3001/api/history?date=${date}` : `http://localhost:3001/api/history?period=${period}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.success) {
-          setEntries(data.entries);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      setLoading(false);
-    };
     fetchHistory();
-
     if (date === new Date().toLocaleDateString('sv')) {
       setPeriod('day');
     } else if (date) {
@@ -38,6 +45,24 @@ const HistoryView = () => {
       setExpandedIds(expandedIds.filter(item => item !== id));
     } else {
       setExpandedIds([...expandedIds, id]);
+    }
+  };
+
+  const handlePrivateSubmit = async () => {
+    if (!privEntry.pago || !privEntry.distancia) return;
+    try {
+      const res = await fetch('http://localhost:3001/api/private_trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...privEntry, date })
+      });
+      if (res.ok) {
+        setPrivateMode(false);
+        setPrivEntry({ pago: '', distancia: '', descripcion: '' });
+        fetchHistory();
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -56,11 +81,29 @@ const HistoryView = () => {
         />
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
         <button onClick={() => { setPeriod('day'); setDate(new Date().toLocaleDateString('sv')); }} className={`btn ${period === 'day' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Hoy</button>
-        <button onClick={() => { setPeriod('week'); setDate(''); }} className={`btn ${period === 'week' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Semana</button>
-        <button onClick={() => { setPeriod('month'); setDate(''); }} className={`btn ${period === 'month' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px', fontSize: '12px' }}>Mes</button>
+        <button onClick={() => setPrivateMode(!privateMode)} className="btn btn-secondary" style={{ padding: '8px', fontSize: '12px', border: '1px solid var(--didi-orange)', color: 'var(--didi-orange)' }}>
+          {privateMode ? '✖️ Cancelar' : '➕ Viaje Privado'}
+        </button>
       </div>
+
+      {privateMode && (
+        <div className="card" style={{ marginBottom: '20px', border: '1px solid var(--didi-orange)', animation: 'slideDown 0.3s ease' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div>
+              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>PAGO RECEIVED</label>
+              <input type="number" value={privEntry.pago} onChange={e => setPrivEntry({...privEntry, pago: e.target.value})} placeholder="$0.00" style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', borderRadius: '6px', color: 'white' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>KM RECORRIDOS</label>
+              <input type="number" value={privEntry.distancia} onChange={e => setPrivEntry({...privEntry, distancia: e.target.value})} placeholder="0.0" style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', borderRadius: '6px', color: 'white' }} />
+            </div>
+          </div>
+          <input type="text" value={privEntry.descripcion} onChange={e => setPrivEntry({...privEntry, descripcion: e.target.value})} placeholder="Descripción (Ej: Fuera de App Centro)" style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', borderRadius: '6px', color: 'white', marginBottom: '10px' }} />
+          <button onClick={handlePrivateSubmit} className="btn btn-primary" style={{ width: '100%' }}>Guardar Viaje Privado</button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '20px' }}>Auditando registros...</div>
@@ -74,20 +117,21 @@ const HistoryView = () => {
           <div className="card" style={{ textAlign: 'center' }}>No hay viajes registrados en este periodo.</div>
         ) : (
           entries.map((entry) => {
-            const isBad = entry.calificacion_seleccion === 'Ineficiente' || entry.calificacion_seleccion === 'Bajo';
-            const isExpanded = expandedIds.includes(entry.id);
+            const isPrivate = entry.tipo === 'privado';
+            const isBad = !isPrivate && (entry.calificacion_seleccion === 'Ineficiente' || entry.calificacion_seleccion === 'Bajo');
+            const isExpanded = expandedIds.includes(entry.id + (entry.tipo || ''));
             return (
-              <div key={entry.id} onClick={() => toggleExpand(entry.id)} className="card" style={{
+              <div key={entry.id + (entry.tipo || '')} onClick={() => toggleExpand(entry.id + (entry.tipo || ''))} className="card" style={{
                 cursor: 'pointer',
-                borderLeft: isBad ? '4px solid var(--error-red)' : '4px solid var(--success-green)',
+                borderLeft: isPrivate ? '4px solid #3498db' : (isBad ? '4px solid var(--error-red)' : '4px solid var(--success-green)'),
                 transition: 'all 0.3s ease',
                 padding: isExpanded ? '20px' : '15px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '5px' }}>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', letterSpacing: '1px' }}>PAGO</div>
-                    <div style={{ fontSize: '15px', color: 'var(--text-muted)' }}>
-                      ${parseFloat(entry.ganancias_desp_imp).toFixed(2)}
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', letterSpacing: '1px' }}>{isPrivate ? 'PRIVADO' : 'PAGO'}</div>
+                    <div style={{ fontSize: '15px', color: isPrivate ? '#3498db' : 'var(--text-muted)' }}>
+                      ${parseFloat(isPrivate ? entry.pago : entry.ganancias_desp_imp).toFixed(2)}
                     </div>
                   </div>
                   <div style={{ flex: 1, textAlign: 'center' }}>
@@ -96,21 +140,30 @@ const HistoryView = () => {
                       {entry.distancia} km
                     </div>
                   </div>
-                  <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', letterSpacing: '1px' }}>EFICIENCIA</div>
-                    <div style={{ fontSize: '15px', color: isBad ? 'var(--error-red)' : 'var(--success-green)' }}>
-                      ${parseFloat(entry.roi_km).toFixed(2)}
+                  {!isPrivate && (
+                    <div style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', letterSpacing: '1px' }}>EFICIENCIA</div>
+                      <div style={{ fontSize: '15px', color: isBad ? 'var(--error-red)' : 'var(--success-green)' }}>
+                        ${parseFloat(entry.roi_km).toFixed(2)}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div style={{ flex: 1, textAlign: 'right' }}>
                     <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', letterSpacing: '1px' }}>GANANCIA</div>
                     <div style={{ fontSize: '15px', color: 'var(--success-green)' }}>
-                      ${parseFloat(entry.ganancia_real).toFixed(2)}
+                      ${parseFloat(isPrivate ? entry.pago : entry.ganancia_real).toFixed(2)}
                     </div>
                   </div>
                 </div>
 
-                {isExpanded && (
+                {isExpanded && isPrivate && (
+                   <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px' }}>
+                      <div style={{ fontSize: '12px', color: '#eee' }}>{entry.descripcion}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>Registrado el {new Date(entry.fecha).toLocaleDateString()}</div>
+                   </div>
+                )}
+
+                {isExpanded && !isPrivate && (
                   <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <AlertCircle size={16} color="var(--didi-orange)" />

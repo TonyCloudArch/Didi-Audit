@@ -23,7 +23,7 @@ const Dashboard = () => {
   useEffect(() => {
     setLoading(true);
     checkShift();
-    setStats({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0 });
+    setStats({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
     fetch(`http://localhost:3001/api/dashboard?date=${date}`)
       .then(r => r.json())
       .then(d => {
@@ -34,7 +34,10 @@ const Dashboard = () => {
           roi: Number(d.roi || 0),
           totalKmDidi: Number(d.total_km || 0),
           ingresoEfectivo: Number(d.ingresoEfectivo || 0),
-          ingresoTarjeta: Number(d.ingresoTarjeta || 0)
+          ingresoTarjeta: Number(d.ingresoTarjeta || 0),
+          km_muertos: Number(d.km_muertos || 0),
+          km_didi: Number(d.km_didi || 0),
+          km_privado: Number(d.km_privado || 0)
         });
         setLoading(false);
       })
@@ -62,7 +65,7 @@ const Dashboard = () => {
     }
   };
 
-  const { currentDisposition, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta } = stats;
+  const { currentDisposition, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado } = stats;
 
   return (
     <div className="mobile-container">
@@ -153,7 +156,7 @@ const Dashboard = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px' }}>
         <div className="card" style={{ marginBottom: '10px', padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '10px' }}>TOTAL DIDI</div>
+          <div className="card-title" style={{ fontSize: '10px' }}>TOTAL INGRESOS</div>
           <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${currentDisposition.toFixed(2)}</div>
         </div>
         <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'var(--error-red)', borderLeft: '4px solid var(--error-red)' }}>
@@ -166,6 +169,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* 💳 Desglose Efectivo vs Tarjeta */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
         <div className="card" style={{ padding: '10px', borderTop: '2px solid var(--success-green)' }}>
           <div className="card-title" style={{ fontSize: '9px' }}>COBRADO EN EFECTIVO</div>
@@ -174,6 +178,30 @@ const Dashboard = () => {
         <div className="card" style={{ padding: '10px', borderTop: '2px solid #3498db' }}>
           <div className="card-title" style={{ fontSize: '9px' }}>DEPÓSITO TARJETA</div>
           <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#3498db' }}>${ingresoTarjeta.toFixed(2)}</div>
+        </div>
+      </div>
+
+      {/* 🕵️‍♂️ Análisis de Kilometraje (KM Muertos vs Productivos) */}
+      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="card-title" style={{ fontSize: '11px', textAlign: 'center' }}>EFICIENCIA DE RUTA (KM TOTALES: {totalKmDidi.toFixed(1)})</div>
+        <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--didi-orange)' }} title="DiDi"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)' }}></div>
+            <span>DiDi: {km_didi.toFixed(1)} km</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
+            <span>Priv: {km_privado.toFixed(1)} km</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
+            <span>Muertos: {km_muertos.toFixed(1)} km</span>
+          </div>
         </div>
       </div>
 
