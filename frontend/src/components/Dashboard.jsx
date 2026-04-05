@@ -71,8 +71,8 @@ const Dashboard = () => {
           <h1>Mazatlán Audit Pro</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
             {activeShift 
-              ? `🟡 TURNO ABIERTO (ODO: ${activeShift.initial_odometer})` 
-              : '⚪️ TURNO CERRADO'}
+              ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` 
+              : (date === new Date().toLocaleDateString('sv') ? '🟢 TURNO EN CURSO' : '🔴 TURNO CERRADO')}
           </p>
         </div>
         <input
@@ -83,10 +83,18 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="card" style={{ padding: '12px', borderLeft: activeShift ? '4px solid var(--didi-orange)' : '4px solid #444', background: activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)' }}>
+      {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
+      <div className="card" style={{ 
+        padding: '12px', 
+        borderLeft: activeShift ? '4px solid var(--didi-orange)' : '4px solid #444', 
+        background: activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)',
+        opacity: date !== new Date().toLocaleDateString('sv') ? 0.4 : 1,
+        filter: date !== new Date().toLocaleDateString('sv') ? 'grayscale(1)' : 'none',
+        pointerEvents: date !== new Date().toLocaleDateString('sv') ? 'none' : 'auto'
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{activeShift ? 'CIERRE DE TURNO' : 'INICIO DE TURNO'}</div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO'}</div>
           </div>
           <button 
             onClick={() => setShowShiftModal(true)}
@@ -171,7 +179,7 @@ const Dashboard = () => {
 
       <div className="card" style={{ marginTop: '0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="card-title">Cubo de Disposición (Meta Hoy)</div>
+          <div className="card-title">Progreso Meta Diaria</div>
           <div style={{ fontSize: '12px', color: 'var(--didi-orange)' }}>${dailyGoal} MXN</div>
         </div>
         <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '4px', marginTop: '8px', overflow: 'hidden' }}>
@@ -187,12 +195,23 @@ const Dashboard = () => {
       <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div className="card-title">Selección IQ (ROI Real)</div>
-          <div className={`card-value ${roi >= 10 ? 'indicator-green' : 'indicator-red'}`}>
+          <div style={{ 
+            fontSize: '28px', 
+            fontWeight: 'bold', 
+            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)' 
+          }}>
             ${roi.toFixed(2)}/km
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <span style={{ backgroundColor: roi >= 18 ? 'rgba(0,209,102,0.15)' : roi >= 12 ? 'rgba(0,209,102,0.1)' : 'rgba(255,100,0,0.1)', color: roi >= 12 ? 'var(--success-green)' : 'var(--didi-orange)', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+          <span style={{ 
+            backgroundColor: roi >= 18 ? 'rgba(0,229,255,0.1)' : roi >= 12 ? 'rgba(0,209,102,0.1)' : roi >= 8 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)', 
+            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)',
+            padding: '4px 8px', 
+            borderRadius: '4px', 
+            fontSize: '10px', 
+            fontWeight: 'bold' 
+          }}>
             {roi >= 18 ? 'SÚPER ÉLITE' : roi >= 12 ? 'EXCELENTE' : roi >= 8 ? 'META' : 'INEFICIENTE'}
           </span>
         </div>

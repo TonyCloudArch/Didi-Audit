@@ -143,7 +143,7 @@ const HistoryView = () => {
                         <span style={{ color: 'var(--error-red)' }}>-${parseFloat(entry.impuesto).toFixed(2)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px', borderTop: '1px solid #333', paddingTop: '8px', fontWeight: 'bold' }}>
-                        <span>Utilidad Neta (Cubo)</span>
+                        <span>Utilidad Neta (Meta)</span>
                         <span style={{ color: 'var(--success-green)' }}>${parseFloat(entry.ganancias_desp_imp).toFixed(2)}</span>
                       </div>
                     </div>
