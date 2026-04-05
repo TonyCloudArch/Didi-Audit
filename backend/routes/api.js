@@ -45,7 +45,7 @@ router.post('/shifts/open', async (req, res) => {
       await db.execute(
         `INSERT INTO shift_denominations (shift_id, type, m1, m2, m5, m10, b20, b50, b100, b200, b500, total_calculated)
          VALUES (?, 'OPEN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [result.insertId, m1||0, m2||0, m5||0, m10||0, b20||0, b50||0, b100||0, b200||0, b500||0, total||initial_cash]
+        [result.insertId, m1 || 0, m2 || 0, m5 || 0, m10 || 0, b20 || 0, b50 || 0, b100 || 0, b200 || 0, b500 || 0, total || initial_cash]
       );
     }
 
@@ -58,7 +58,7 @@ router.post('/shifts/open', async (req, res) => {
 // 💤 Marcar Día como Descansado
 router.post('/shifts/rest', async (req, res) => {
   const { date } = req.body;
-  
+
   if (isFutureDate(date)) {
     return res.status(400).json({ error: 'No puedes marcar como descanso una fecha futura.' });
   }
@@ -129,7 +129,7 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
 
         // 1. IA extrae datos del par de imágenes
         const aiData = await parseDidiReport(paths);
-        
+
         // 🛡️ Filtro de Seguridad: Solo procesar viajes auténticos
         if (aiData.is_valid_didi_ride === false) {
           console.warn('⚠️ Imagen ignorada: No se detectó un resumen de viaje de DiDi válido.');
@@ -141,12 +141,12 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         const d = Number(aiData.distancia) || 0;
         const n = Number(aiData.tus_ganancias) || 0; // Se utiliza el Ingreso Bruto Operacional
         const roi = d > 0 ? (n / d) : 0;
-        
+
         // ⛽️ Costo dinámico: toma el más reciente de fuel_receipts
         const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
         const gasCostPerKm = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27; // fallback si no hay ticket aún
         const profitReal = n - (d * gasCostPerKm);
-        
+
         // El Juez Mazatleco decide:
         let calificacion = "Ineficiente";
         if (roi >= 18) calificacion = "Súper Élite";
@@ -203,23 +203,26 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         viajesProcesados++;
       } catch (err) {
         console.error("Error en par iterativo:", err.message);
-        fallbackError = err.message; // Guardamos el error pero seguimos o detenemos según severidad
-        // Si es 429 Too Many Requests (Rate limit de OpenAI), no tiene sentido seguir
+        fallbackError = err.message;
         if (err.message.includes("429") || err.message.includes("Rate limit") || err.message.includes("Insufficient quota")) {
           break;
         }
-        results.push(aiData);
       }
     }
 
-    // Trigger de recalibración (ROI y Ganancia Real)
+    // Trigger de recalibración (ROI Bruto y Ganancia Real)
     const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
-    if (fuelRows.length > 0) {
-      const latestPrice = Number(fuelRows[0].costo_real_km);
-      await db.execute('UPDATE entries SET ganancia_real = tus_ganancias - (distancia * ?), roi_km = (tus_ganancias - (distancia * ?)) / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END) WHERE shift_id = ?', [latestPrice, latestPrice, shiftId]);
-    }
+    const latestPrice = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27;
 
-    res.json({ success: true, count: results.length });
+    await db.execute(
+      `UPDATE entries 
+       SET ganancia_real = tus_ganancias - (distancia * ?), 
+           roi_km = tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END) 
+       WHERE shift_id = ?`, 
+      [latestPrice, shiftId]
+    );
+
+    res.json({ success: true, count: viajesProcesados });
 
   } catch (err) {
     console.error("Error global batch parsing:", err);
@@ -339,7 +342,7 @@ router.post('/shifts/close', async (req, res) => {
       await db.execute(
         `INSERT INTO shift_denominations (shift_id, type, m1, m2, m5, m10, b20, b50, b100, b200, b500, total_calculated)
          VALUES (?, 'CLOSE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [shift_id, m1||0, m2||0, m5||0, m10||0, b20||0, b50||0, b100||0, b200||0, b500||0, total||final_cash_counted]
+        [shift_id, m1 || 0, m2 || 0, m5 || 0, m10 || 0, b20 || 0, b50 || 0, b100 || 0, b200 || 0, b500 || 0, total || final_cash_counted]
       );
     }
 
@@ -370,7 +373,7 @@ router.post('/private_trips', async (req, res) => {
   try {
     const [shift] = await db.execute("SELECT id FROM shifts WHERE DATE(start_time) = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1", [targetDate]);
     const shiftId = shift[0] ? shift[0].id : null;
-    
+
     await db.execute(
       "INSERT INTO private_trips (shift_id, fecha, pago, distancia, descripcion) VALUES (?, ?, ?, ?, ?)",
       [shiftId, targetDate, pago, distancia, descripcion || 'Viaje Privado']
@@ -459,9 +462,9 @@ router.get('/dashboard', async (req, res) => {
     const kmMuertos = kmTotalesOdo > kmProductivos ? (kmTotalesOdo - kmProductivos) : 0;
     const costoKm = fuel?.costo_real_km || 0;
     const gastoGasolina = kmTotalesOdo * costoKm;
-    const utilidadReal = totalIngresos - gastoGasolina;
-    const utilidadOperativa = totalOperativo - gastoGasolina;
-    const roi = kmTotalesOdo > 0 ? (utilidadOperativa / kmTotalesOdo) : 0;
+    const utilidadReal = totalIngresos - gastoGasolina - Number(didi.impuestos || 0);
+    // Selección IQ (Bruta): Se basa en el Ingreso Operativo (para comparar con regla $8)
+    const roi = kmTotalesOdo > 0 ? (totalOperativo / kmTotalesOdo) : 0;
 
     res.json({
       success: true,
