@@ -5,7 +5,7 @@ import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown } from 'lucide-reac
 const Dashboard = () => {
   const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
+  const [date, setDate] = useState(() => localStorage.getItem('shared_audit_date') || new Date().toLocaleDateString('sv'));
   const [activeShift, setActiveShift] = useState(null);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [shiftInputs, setShiftInputs] = useState({ odometer: '', cash: '' });
@@ -28,23 +28,26 @@ const Dashboard = () => {
     fetch(`http://localhost:3001/api/dashboard?date=${date}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) setStats({
-          currentDisposition: Number(d.currentDisposition || 0),
-          ingresoBruto: Number(d.ingresoBruto || 0),
-          cuotaDidi: Number(d.cuotaDidi || 0),
-          incentivos: Number(d.incentivos || 0),
-          impuestos: Number(d.impuestos || 0),
-          utilidadReal: Number(d.utilidadReal || 0),
-          gastoGasolina: Number(d.gastoGasolina || 0),
-          roi: Number(d.roi || 0),
-          totalKmDidi: Number(d.total_km || 0),
-          ingresoEfectivo: Number(d.ingresoEfectivo || 0),
-          ingresoTarjeta: Number(d.ingresoTarjeta || 0),
-          km_muertos: Number(d.km_muertos || 0),
-          km_didi: Number(d.km_didi || 0),
-          km_privado: Number(d.km_privado || 0),
-          isRestDay: Number(d.shift_initial_odometer) === -1
-        });
+        if (d.success) {
+          setStats({
+            currentDisposition: Number(d.currentDisposition || 0),
+            ingresoBruto: Number(d.ingresoBruto || 0),
+            cuotaDidi: Number(d.cuotaDidi || 0),
+            incentivos: Number(d.incentivos || 0),
+            impuestos: Number(d.impuestos || 0),
+            utilidadReal: Number(d.utilidadReal || 0),
+            gastoGasolina: Number(d.gastoGasolina || 0),
+            roi: Number(d.roi || 0),
+            totalKmDidi: Number(d.total_km || 0),
+            ingresoEfectivo: Number(d.ingresoEfectivo || 0),
+            ingresoTarjeta: Number(d.ingresoTarjeta || 0),
+            km_muertos: Number(d.km_muertos || 0),
+            km_didi: Number(d.km_didi || 0),
+            km_privado: Number(d.km_privado || 0),
+            isRestDay: Number(d.shift_initial_odometer) === -1
+          });
+          localStorage.setItem('shared_audit_date', date); // 🏁 Sincronizar fecha global
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));

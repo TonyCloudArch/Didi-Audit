@@ -3,7 +3,7 @@ import { AlertCircle, Fuel, CreditCard } from 'lucide-react';
 
 const HistoryView = () => {
   const [entries, setEntries] = useState([]);
-  const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
+  const [date, setDate] = useState(() => localStorage.getItem('shared_audit_date') || new Date().toLocaleDateString('sv'));
   const [period, setPeriod] = useState('day');
   const [loading, setLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState([]);
@@ -54,6 +54,9 @@ const HistoryView = () => {
 
   useEffect(() => {
     fetchHistory();
+    if (date) {
+      localStorage.setItem('shared_audit_date', date); // 🏁 Sincronizar de vuelta al Dashboard
+    }
     if (date === new Date().toLocaleDateString('sv')) {
       setPeriod('day');
     } else if (date) {
