@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [shiftInputs, setShiftInputs] = useState({ odometer: '', cash: '' });
   const [denoms, setDenoms] = useState({ m1:0, m2:0, m5:0, m10:0, b20:0, b50:0, b100:0, b200:0, b500:0 });
   const dailyGoal = 500.00;
+  const [showRestDayModal, setShowRestDayModal] = useState(false);
 
   const totalDenoms = (denoms.m1*1) + (denoms.m2*2) + (denoms.m5*5) + (denoms.m10*10) + (denoms.b20*20) + (denoms.b50*50) + (denoms.b100*100) + (denoms.b200*200) + (denoms.b500*500);
 
@@ -23,7 +24,7 @@ const Dashboard = () => {
   useEffect(() => {
     setLoading(true);
     checkShift();
-    setStats({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
+    setStats({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, isRestDay: false });
     fetch(`http://localhost:3001/api/dashboard?date=${date}`)
       .then(r => r.json())
       .then(d => {
@@ -41,7 +42,8 @@ const Dashboard = () => {
           ingresoTarjeta: Number(d.ingresoTarjeta || 0),
           km_muertos: Number(d.km_muertos || 0),
           km_didi: Number(d.km_didi || 0),
-          km_privado: Number(d.km_privado || 0)
+          km_privado: Number(d.km_privado || 0),
+          isRestDay: Number(d.shift_initial_odometer) === -1
         });
         setLoading(false);
       })
@@ -69,7 +71,26 @@ const Dashboard = () => {
     }
   };
 
-  const { currentDisposition, ingresoBruto, cuotaDidi, incentivos, impuestos, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado } = stats;
+  const handleMarkRestDayConfirm = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/shifts/rest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStats(prev => ({ ...prev, isRestDay: true }));
+        setShowRestDayModal(false);
+      } else {
+        alert(data.error || "Error al registrar descanso");
+      }
+    } catch(err) {
+      alert("Error de conexión");
+    }
+  };
+
+  const { currentDisposition, ingresoBruto, cuotaDidi, incentivos, impuestos, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado, isRestDay } = stats;
 
   return (
     <div className="mobile-container">
@@ -81,9 +102,11 @@ const Dashboard = () => {
               <span style={{ color: 'var(--text-main)', fontSize: '20px' }}>${currentDisposition.toFixed(2)}</span>
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '2px', marginBottom: 0 }}>
-              {date !== new Date().toLocaleDateString('sv') 
-                ? '🔴 HISTÓRICO / CERRADO' 
-                : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
+              {isRestDay 
+                ? '🔵 DÍA DESCANSADO'
+                : date !== new Date().toLocaleDateString('sv') 
+                  ? '🔴 HISTÓRICO / CERRADO' 
+                  : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
             </p>
           </div>
           <input
@@ -175,6 +198,25 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* 💤 Confirmación de Día Descansado */}
+      {showRestDayModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '90vh', overflowY: 'auto', borderLine: '1px solid #333' }}>
+            <h3 style={{ fontSize: '14px', textAlign: 'center', color: '#888' }}>CORTE DE ACTIVIDAD</h3>
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', textAlign: 'center' }}>
+              ¿Confirmas que el día <strong>{date}</strong> será marcado oficialmente como DÍA DESCANSADO?
+            </p>
+            <p style={{ fontSize: '11px', color: 'var(--error-red)', textAlign: 'center', backgroundColor: 'rgba(255, 59, 48, 0.1)', padding: '10px', borderRadius: '4px' }}>
+              ⚠️ Esta acción bloqueará permanentemente la carga del Lector Mágico y los Tickets de Gasolina para este día en específico. No se podrá deshacer.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowRestDayModal(false)} style={{ flex: 1 }}>Cancelar</button>
+              <button className="btn" onClick={handleMarkRestDayConfirm} style={{ flex: 1, backgroundColor: '#3498db', color: 'white', fontWeight: 'bold' }}>Sí, aplicar descanso</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🧠 Inteligencia Financiera (ROI Diario) */}
       <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <div>
@@ -198,6 +240,30 @@ const Dashboard = () => {
           }}>
             {roi >= 18 ? 'SÚPER ÉLITE' : roi >= 12 ? 'EXCELENTE' : roi >= 8 ? 'META' : 'INEFICIENTE'}
           </span>
+        </div>
+      </div>
+
+      {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
+      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="card-title" style={{ fontSize: '11px', textAlign: 'center' }}>EFICIENCIA DE RUTA (KM TOTALES: {totalKmDidi.toFixed(1)})</div>
+        <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--didi-orange)' }} title="DiDi"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)' }}></div>
+            <span>DiDi: {km_didi.toFixed(1)} km</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
+            <span>Priv: {km_privado.toFixed(1)} km</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
+            <span>Muertos: {km_muertos.toFixed(1)} km</span>
+          </div>
         </div>
       </div>
 
@@ -247,29 +313,6 @@ const Dashboard = () => {
 
       </div>
 
-      {/* 🕵️‍♂️ Análisis de Kilometraje (KM Muertos vs Productivos) */}
-      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div className="card-title" style={{ fontSize: '11px', textAlign: 'center' }}>EFICIENCIA DE RUTA (KM TOTALES: {totalKmDidi.toFixed(1)})</div>
-        <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--didi-orange)' }} title="DiDi"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)' }}></div>
-            <span>DiDi: {km_didi.toFixed(1)} km</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
-            <span>Priv: {km_privado.toFixed(1)} km</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
-            <span>Muertos: {km_muertos.toFixed(1)} km</span>
-          </div>
-        </div>
-      </div>
 
       <div className="card" style={{ marginTop: '0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -287,30 +330,29 @@ const Dashboard = () => {
       </div>
 
 
-      <div className="card" style={{ borderColor: totalKmDidi > 0 ? 'transparent' : '#333', borderWidth: '1px', borderStyle: 'solid' }}>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <AlertCircle size={20} color={'var(--text-muted)'} />
-          <div>
-            <div className="card-title" style={{ marginBottom: '0' }}>Km DiDi Recorridos Hoy</div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{Number(totalKmDidi).toFixed(1)} km</div>
-          </div>
-        </div>
-        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>
-          Total de km registrados en viajes de DiDi este día.
-        </p>
-      </div>
 
-      {date === new Date().toLocaleDateString('sv') && (
+      {/* Backfill controls */}
+      { !isRestDay && (
+        (date === new Date().toLocaleDateString('sv') && activeShift) || 
+        (date >= '2026-03-16' && date !== new Date().toLocaleDateString('sv') && (ingresoBruto === 0 && gastoGasolina === 0))
+      ) && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-          <Link to="/audit" className="btn btn-primary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
+          <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
             <Camera size={32} />
             Lector Mágico
           </Link>
-          <Link to="/cubo" className="btn btn-secondary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
+          <Link to={`/cubo?date=${date}`} className="btn btn-secondary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
             <Fuel size={32} />
             Cargas de Gasolina
           </Link>
         </div>
+      )}
+
+      {/* Rest day control */}
+      { !isRestDay && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || date !== new Date().toLocaleDateString('sv'))) && (
+        <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
+          💤 Marcar como Día Descansado
+        </button>
       )}
     </div>
   );

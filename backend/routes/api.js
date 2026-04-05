@@ -49,6 +49,27 @@ router.post('/shifts/open', async (req, res) => {
   }
 });
 
+// 💤 Marcar Día como Descansado
+router.post('/shifts/rest', async (req, res) => {
+  const { date } = req.body;
+  try {
+    // Verificar que no haya un turno ya real ese día (que no sea -1)
+    const [existing] = await db.execute('SELECT id FROM shifts WHERE DATE(start_time) = ?', [date]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Ya existe actividad registrada en este día.' });
+    }
+
+    await db.execute(
+      'INSERT INTO shifts (start_time, end_time, initial_odometer, final_odometer, status) VALUES (?, ?, -1, -1, "CLOSED")',
+      [`${date} 12:00:00`, `${date} 12:00:00`]
+    );
+
+    res.json({ success: true, message: 'Día marcado como descansado.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 📸 2. Cargar Imágenes en Lote (Magic Reader Batch)
 router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
   if (!req.files || req.files.length === 0) return res.status(400).send('No images uploaded');
@@ -422,7 +443,9 @@ router.get('/dashboard', async (req, res) => {
       km_didi: Number(didi.km_didi),
       km_privado: Number(priv.km_privado),
       ingresoEfectivo: Number(didi.ingresoEfectivo),
-      ingresoTarjeta: Number(didi.ingresoTarjeta)
+      ingresoTarjeta: Number(didi.ingresoTarjeta),
+      shift_initial_odometer: Number(shift?.initial_odometer),
+      shift_status: shift?.status || null
     });
   } catch (err) {
     console.error("Dashboard error:", err);
