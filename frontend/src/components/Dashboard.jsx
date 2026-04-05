@@ -73,21 +73,26 @@ const Dashboard = () => {
 
   return (
     <div className="mobile-container">
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1>Mazatlán Audit Pro</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
-            {date !== new Date().toLocaleDateString('sv') 
-              ? '🔴 HISTÓRICO / CERRADO' 
-              : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
-          </p>
+      <div className="header" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              En Caja 
+              <span style={{ color: 'var(--text-main)', fontSize: '20px' }}>${currentDisposition.toFixed(2)}</span>
+            </h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '2px', marginBottom: 0 }}>
+              {date !== new Date().toLocaleDateString('sv') 
+                ? '🔴 HISTÓRICO / CERRADO' 
+                : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
+            </p>
+          </div>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
+          />
         </div>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
-        />
       </div>
 
       {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
@@ -170,49 +175,76 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* 🎭 La Auditoría Maestra (Cascada Didi Desenmascarada) */}
-      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Auditoría de Fondos Inyectados vs Utilitarios</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
-        {/* ROW 1 */}
-        <div className="card" style={{ marginBottom: '10px', padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TOTAL INGRESO (FICTICIO)</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${ingresoBruto.toFixed(2)}</div>
+      {/* 🧠 Inteligencia Financiera (ROI Diario) */}
+      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div>
+          <div className="card-title">Selección IQ (ROI Real)</div>
+          <div style={{ 
+            fontSize: '28px', 
+            fontWeight: 'bold', 
+            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)' 
+          }}>
+            ${roi.toFixed(2)}<span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/km</span>
+          </div>
         </div>
-        <div className="card" style={{ marginBottom: '10px', padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>INCENTIVOS Y BONOS</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>+${incentivos.toFixed(2)}</div>
-        </div>
-        
-        {/* ROW 2 */}
-        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'rgba(255,59,48,0.5)', borderLeft: '4px solid var(--error-red)' }}>
-          <div className="card-title" style={{ fontSize: '9px', color: 'var(--error-red)', marginBottom: '2px' }}>TAJADA DE LA APP (DIDI)</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi).toFixed(2)}</div>
-        </div>
-        <div className="card" style={{ marginBottom: '10px', padding: '10px', borderColor: 'rgba(255,59,48,0.5)', borderLeft: '4px solid var(--error-red)' }}>
-          <div className="card-title" style={{ fontSize: '9px', color: 'var(--error-red)', marginBottom: '2px' }}>IMPUESTOS DICTADOS</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${impuestos.toFixed(2)}</div>
+        <div style={{ textAlign: 'right' }}>
+          <span style={{ 
+            backgroundColor: roi >= 18 ? 'rgba(0,229,255,0.1)' : roi >= 12 ? 'rgba(0,209,102,0.1)' : roi >= 8 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)', 
+            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)',
+            padding: '4px 8px', 
+            borderRadius: '4px', 
+            fontSize: '10px', 
+            fontWeight: 'bold' 
+          }}>
+            {roi >= 18 ? 'SÚPER ÉLITE' : roi >= 12 ? 'EXCELENTE' : roi >= 8 ? 'META' : 'INEFICIENTE'}
+          </span>
         </div>
       </div>
 
-      {/* 💳 Desglose Efectivo vs Tarjeta y Resultados Materiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+      {/* 🎭 La Auditoría Maestra Financiera */}
+      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cascada Financiera de Rentabilidad</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px', marginBottom: '10px' }}>
+        
+        {/* ROW 1: Espejismos y Bonos */}
         <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px' }}>COBRADO EN EFECTIVO</div>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TOTAL INGRESO (FICTICIO)</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${ingresoBruto.toFixed(2)}</div>
+        </div>
+        <div className="card" style={{ padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>INCENTIVOS Y BONOS</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>+${incentivos.toFixed(2)}</div>
+        </div>
+
+        {/* ROW 2: Liquidez Cruda (Lo que hay en la mano/cartera) */}
+        <div className="card" style={{ padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>COBRADO EN EFECTIVO</div>
           <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoEfectivo.toFixed(2)}</div>
         </div>
         <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px' }}>DEPÓSITO TARJETA</div>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>DEPÓSITO TARJETA</div>
           <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoTarjeta.toFixed(2)}</div>
         </div>
+        
+        {/* ROW 3: Evasiones y Costos Adheridos (Las "Mordidas" operativas) */}
+        <div className="card" style={{ padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TAJADA DE LA APP (DIDI)</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi).toFixed(2)}</div>
+        </div>
+        <div className="card" style={{ padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>IMPUESTOS DICTADOS</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${impuestos.toFixed(2)}</div>
+        </div>
 
-        <div className="card" style={{ padding: '10px', borderColor: 'rgba(255,59,48,0.5)', borderLeft: '4px solid var(--error-red)' }}>
-          <div className="card-title" style={{ fontSize: '9px', color: 'var(--error-red)', marginBottom: '2px' }}>IMPACTO DE GASOLINA</div>
+        {/* ROW 4: Costo logístico profundo vs El Gran Sobreviviente */}
+        <div className="card" style={{ padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>IMPACTO DE GASOLINA</div>
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px', borderColor: 'var(--success-green)', borderLeft: '4px solid var(--success-green)', backgroundColor: 'rgba(0, 209, 102, 0.05)' }}>
-          <div className="card-title" style={{ fontSize: '9px', color: 'var(--success-green)', marginBottom: '2px' }}>UTILIDAD REAL LIBRE</div>
+        <div className="card" style={{ padding: '10px' }}>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>UTILIDAD REAL LIBRE</div>
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--success-green)' }}>${utilidadReal.toFixed(2)}</div>
         </div>
+
       </div>
 
       {/* 🕵️‍♂️ Análisis de Kilometraje (KM Muertos vs Productivos) */}
@@ -254,30 +286,6 @@ const Dashboard = () => {
         </p>
       </div>
 
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div className="card-title">Selección IQ (ROI Real)</div>
-          <div style={{ 
-            fontSize: '28px', 
-            fontWeight: 'bold', 
-            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)' 
-          }}>
-            ${roi.toFixed(2)}/km
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <span style={{ 
-            backgroundColor: roi >= 18 ? 'rgba(0,229,255,0.1)' : roi >= 12 ? 'rgba(0,209,102,0.1)' : roi >= 8 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)', 
-            color: roi >= 18 ? '#00e5ff' : roi >= 12 ? 'var(--success-green)' : roi >= 8 ? 'var(--didi-orange)' : 'var(--error-red)',
-            padding: '4px 8px', 
-            borderRadius: '4px', 
-            fontSize: '10px', 
-            fontWeight: 'bold' 
-          }}>
-            {roi >= 18 ? 'SÚPER ÉLITE' : roi >= 12 ? 'EXCELENTE' : roi >= 8 ? 'META' : 'INEFICIENTE'}
-          </span>
-        </div>
-      </div>
 
       <div className="card" style={{ borderColor: totalKmDidi > 0 ? 'transparent' : '#333', borderWidth: '1px', borderStyle: 'solid' }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
