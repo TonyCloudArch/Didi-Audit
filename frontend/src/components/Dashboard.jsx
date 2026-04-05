@@ -292,16 +292,18 @@ const Dashboard = () => {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-        <Link to="/audit" className="btn btn-primary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
-          <Camera size={32} />
-          Lector Mágico
-        </Link>
-        <Link to="/cubo" className="btn btn-secondary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
-          <Fuel size={32} />
-          Cargas de Gasolina
-        </Link>
-      </div>
+      {date === new Date().toLocaleDateString('sv') && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+          <Link to="/audit" className="btn btn-primary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
+            <Camera size={32} />
+            Lector Mágico
+          </Link>
+          <Link to="/cubo" className="btn btn-secondary" style={{ flexDirection: 'column', height: '100px', fontSize: '14px' }}>
+            <Fuel size={32} />
+            Cargas de Gasolina
+          </Link>
+        </div>
+      )}
     </div>
   );
 };
