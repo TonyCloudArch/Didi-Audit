@@ -235,22 +235,22 @@ const Dashboard = () => {
           <div style={{ 
             fontSize: '28px', 
             fontWeight: 'bold', 
-            color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : 'var(--error-red)')))
+            color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)'))))
           }}>
             ${roi.toFixed(2)}<span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/km</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <span style={{ 
-            backgroundColor: isFuture ? '#1a1a1a' : (roi >= 20 ? 'rgba(255,215,0,0.1)' : (roi >= 12 ? 'rgba(0,229,255,0.1)' : (roi >= 8 ? 'rgba(0,209,102,0.1)' : 'rgba(255,59,48,0.1)'))), 
-            color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : 'var(--error-red)'))),
+            backgroundColor: isFuture ? '#1a1a1a' : (roi >= 20 ? 'rgba(255,215,0,0.1)' : (roi >= 12 ? 'rgba(0,229,255,0.1)' : (roi >= 8 ? 'rgba(0,209,102,0.1)' : (roi >= 6 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)')))), 
+            color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)')))),
             padding: '4px 8px', 
             borderRadius: '4px', 
             fontSize: '10px', 
             fontWeight: 'bold',
             boxShadow: roi >= 20 ? '0 0 10px rgba(255,215,0,0.3)' : 'none'
           }}>
-            {isFuture ? 'PLANIFICADO' : (roi >= 20 ? '🎫 BOLETO DORADO' : (roi >= 12 ? 'SÚPER ÉLITE' : (roi >= 8 ? 'EFICIENTE' : 'INEFICIENTE')))}
+            {isFuture ? 'PLANIFICADO' : (roi >= 20 ? '🎫 BOLETO DORADO' : (roi >= 12 ? 'SÚPER ÉLITE' : (roi >= 8 ? 'EFICIENTE' : (roi >= 6 ? 'POBRE' : 'FATAL'))))}
           </span>
         </div>
       </div>

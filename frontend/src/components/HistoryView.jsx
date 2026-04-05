@@ -88,7 +88,7 @@ const HistoryView = () => {
             transform: 'translateX(-50%)',
             fontSize: '24px', 
             fontWeight: 900, 
-            color: avgEfficiencyAll >= 20 ? '#FFD700' : (avgEfficiencyAll >= 12 ? '#00e5ff' : (avgEfficiencyAll >= 8 ? 'var(--success-green)' : 'var(--error-red)')),
+            color: avgEfficiencyAll >= 20 ? '#FFD700' : (avgEfficiencyAll >= 12 ? '#00e5ff' : (avgEfficiencyAll >= 8 ? 'var(--success-green)' : (avgEfficiencyAll >= 6 ? 'var(--didi-orange)' : 'var(--error-red)'))),
             textShadow: avgEfficiencyAll >= 20 ? '0 0 15px rgba(255,215,0,0.5)' : 'none'
           }}>
             {avgEfficiencyAll >= 20 && <span style={{ marginRight: '6px' }}>🎫</span>}
@@ -146,15 +146,15 @@ const HistoryView = () => {
             const isPrivate = entry.tipo === 'privado';
             const isGolden = !isPrivate && entry.calificacion_seleccion === 'Boleto Dorado';
             const isSuperElite = !isPrivate && entry.calificacion_seleccion === 'Súper Élite';
-            const isBad = !isPrivate && entry.calificacion_seleccion === 'Ineficiente';
+            const isPobre = !isPrivate && entry.calificacion_seleccion === 'Pobre';
+            const isFatal = !isPrivate && entry.calificacion_seleccion === 'Fatal';
             const isExpanded = expandedIds.includes(entry.id + (entry.tipo || ''));
             
-            const statusColor = isPrivate ? '#3498db' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isBad ? 'var(--error-red)' : 'var(--success-green)')));
+            const statusColor = isPrivate ? '#3498db' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)'))));
 
             return (
               <div key={entry.id + (entry.tipo || '')} onClick={() => toggleExpand(entry.id + (entry.tipo || ''))} className="card" style={{
                 cursor: 'pointer',
-                borderLeft: `4px solid ${statusColor}`,
                 transition: 'all 0.3s ease',
                 padding: isExpanded ? '20px' : '15px'
               }}>
@@ -181,7 +181,7 @@ const HistoryView = () => {
                   )}
                   <div style={{ flex: 1, textAlign: 'right' }}>
                     <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', letterSpacing: '1px' }}>GANANCIA</div>
-                    <div style={{ fontSize: '15px', color: 'var(--success-green)' }}>
+                    <div style={{ fontSize: '15px', color: 'var(--text-muted)' }}>
                       ${parseFloat(isPrivate ? entry.pago : entry.ganancia_real).toFixed(2)}
                     </div>
                   </div>

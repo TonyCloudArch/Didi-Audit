@@ -152,7 +152,9 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         if (roi >= 20) calificacion = "Boleto Dorado";
         else if (roi >= 12) calificacion = "Súper Élite";
         else if (roi >= 8) calificacion = "Eficiente";
-        else calificacion = "Ineficiente";
+        else if (roi >= 6) calificacion = "Pobre";
+        else calificacion = "Fatal";
+        
 
         // 2. Guardar en BD con nombres EXACTOS de DiDi (y cálculos confiables)
         await db.execute(
@@ -217,7 +219,8 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
              WHEN (tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END)) >= 20 THEN 'Boleto Dorado'
              WHEN (tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END)) >= 12 THEN 'Súper Élite'
              WHEN (tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END)) >= 8 THEN 'Eficiente'
-             ELSE 'Ineficiente'
+             WHEN (tus_ganancias / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END)) >= 6 THEN 'Pobre'
+             ELSE 'Fatal'
            END
        WHERE shift_id = ?`, 
       [latestPrice, shiftId]
