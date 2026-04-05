@@ -438,7 +438,7 @@ const CuboFierro = () => {
         <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: latestCost > 2.0 ? '4px solid var(--error-red)' : '4px solid var(--success-green)' }}>
           <div>
             <div style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1px' }}>COSTO GASOLINA ACTUAL</div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: latestCost > 2.0 ? 'var(--error-red)' : 'var(--success-green)' }}>${latestCost.toFixed(4)}/km</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: latestCost > 2.0 ? 'var(--error-red)' : 'var(--success-green)' }}>${latestCost.toFixed(2)}/km</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             {latestCost > 2.0 
@@ -529,7 +529,7 @@ const CuboFierro = () => {
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{r.fecha} • {r.producto}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: isUp ? 'var(--error-red)' : 'var(--success-green)' }}>${Number(r.costo_real_km).toFixed(4)}/km</div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: isUp ? 'var(--error-red)' : 'var(--success-green)' }}>${Number(r.costo_real_km).toFixed(2)}/km</div>
                     {prevCost && <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{isUp ? '▲' : '▼'} vs anterior</div>}
                   </div>
                 </div>
@@ -540,11 +540,11 @@ const CuboFierro = () => {
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>PRECIO/L</div>
-                    <div style={{ fontSize: '13px' }}>${Number(r.precio_litro).toFixed(4)}</div>
+                    <div style={{ fontSize: '13px' }}>${Number(r.precio_litro).toFixed(2)}</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>KM RECORRIDOS</div>
-                    <div style={{ fontSize: '13px' }}>{r.km_recorridos} km</div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>ALCANZA PARA</div>
+                    <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--success-green)' }}>~{Math.round(r.km_recorridos)} km</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>TOTAL</div>
