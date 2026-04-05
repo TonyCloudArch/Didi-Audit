@@ -4,49 +4,151 @@ import { LayoutDashboard, Camera, History, Settings, AlertCircle, CreditCard, Fu
 
 // 📊 Dashboard Component
 const Dashboard = () => {
-  const [stats, setStats] = useState({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0 });
+  const [stats, setStats] = useState({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0 });
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
+  const [activeShift, setActiveShift] = useState(null);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [shiftInputs, setShiftInputs] = useState({ odometer: '', cash: '' });
+  const [denoms, setDenoms] = useState({ m1:0, m2:0, m5:0, m10:0, b20:0, b50:0, b100:0, b200:0, b500:0 });
   const dailyGoal = 500.00;
+
+  const totalDenoms = (denoms.m1*1) + (denoms.m2*2) + (denoms.m5*5) + (denoms.m10*10) + (denoms.b20*20) + (denoms.b50*50) + (denoms.b100*100) + (denoms.b200*200) + (denoms.b500*500);
+
+  const checkShift = () => {
+    fetch('http://localhost:3001/api/shifts/active')
+      .then(r => r.json())
+      .then(d => { if (d.success) setActiveShift(d.activeShift); });
+  };
 
   useEffect(() => {
     setLoading(true);
-    // 🧹 Limpieza de seguridad: resetear stats para que no se queden datos del día anterior
-    setStats({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0 });
+    checkShift();
+    setStats({ currentDisposition: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0 });
     fetch(`http://localhost:3001/api/dashboard?date=${date}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) setStats({ 
-          currentDisposition: Number(d.currentDisposition || 0), 
+        if (d.success) setStats({
+          currentDisposition: Number(d.currentDisposition || 0),
           utilidadReal: Number(d.utilidadReal || 0),
           gastoGasolina: Number(d.gastoGasolina || 0),
-          roi: Number(d.roi || 0), 
-          totalKmDidi: Number(d.totalKmDidi || 0) 
+          roi: Number(d.roi || 0),
+          totalKmDidi: Number(d.total_km || 0),
+          ingresoEfectivo: Number(d.ingresoEfectivo || 0),
+          ingresoTarjeta: Number(d.ingresoTarjeta || 0)
         });
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [date]);
 
-  const { currentDisposition, utilidadReal, gastoGasolina, roi, totalKmDidi } = stats;
+  const handleShiftAction = async () => {
+    const isOpening = !activeShift;
+    const url = isOpening ? 'http://localhost:3001/api/shifts/open' : 'http://localhost:3001/api/shifts/close';
+    const body = isOpening 
+      ? { initial_odometer: Number(shiftInputs.odometer), initial_cash: totalDenoms || Number(shiftInputs.cash), denominations: { ...denoms, total: totalDenoms } }
+      : { shift_id: activeShift.id, final_odometer: Number(shiftInputs.odometer), final_cash_counted: totalDenoms || Number(shiftInputs.cash), denominations: { ...denoms, total: totalDenoms } };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    
+    if (res.ok) {
+      setShowShiftModal(false);
+      setShiftInputs({ odometer: '', cash: '' });
+      setDenoms({ m1:0, m2:0, m5:0, m10:0, b20:0, b50:0, b100:0, b200:0, b500:0 });
+      checkShift();
+    }
+  };
+
+  const { currentDisposition, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta } = stats;
 
   return (
     <div className="mobile-container">
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1>Mazatlán Audit Pro</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Dodge Attitude 2019 • 195k km</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
+            {activeShift 
+              ? `🟡 TURNO ABIERTO (ODO: ${activeShift.initial_odometer})` 
+              : '⚪️ TURNO CERRADO'}
+          </p>
         </div>
-        <input 
-          type="date" 
-          value={date} 
+        <input
+          type="date"
+          value={date}
           onChange={(e) => setDate(e.target.value)}
           style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
         />
       </div>
 
-      {/* 🏁 Meta Diaria (Cubo de Disposición) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+      {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
+      <div className="card" style={{ padding: '12px', borderLeft: activeShift ? '4px solid var(--didi-orange)' : '4px solid #444', background: activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{activeShift ? 'CIERRE DE TURNO' : 'INICIO DE TURNO'}</div>
+          </div>
+          <button 
+            onClick={() => setShowShiftModal(true)}
+            className={`btn ${activeShift ? 'btn-secondary' : 'btn-primary'}`} 
+            style={{ fontSize: '11px', padding: '8px 16px', borderRadius: '20px' }}
+          >
+            {activeShift ? '🚩 Finalizar' : '🚀 Iniciar'}
+          </button>
+        </div>
+      </div>
+
+      {showShiftModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '14px', textAlign: 'center' }}>{activeShift ? 'CIERRE DE JORNADA' : 'INICIO DE JORNADA'}</h3>
+            
+            <div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>ODÓMETRO TOTAL</div>
+              <input 
+                type="number" 
+                value={shiftInputs.odometer} 
+                onChange={e => setShiftInputs({...shiftInputs, odometer: e.target.value})}
+                placeholder="Ej: 195471" 
+                style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', color: 'white', borderRadius: '6px' }} 
+              />
+            </div>
+
+            <div style={{ borderTop: '1px solid #333', paddingTop: '10px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px', textAlign: 'center' }}>CONTADOR DE EFECTIVO (DENOMINACIONES)</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {/* Monedas */}
+                {[1, 2, 5, 10].map(v => (
+                  <div key={`m${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#1a1a1a', padding: '5px', borderRadius: '4px' }}>
+                    <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold' }}>${v}</div>
+                    <input type="number" value={denoms[`m${v}`]} onChange={e => setDenoms({...denoms, [`m${v}`]: Number(e.target.value)})} style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} placeholder="0" />
+                  </div>
+                ))}
+                {/* Billetes */}
+                {[20, 50, 100, 200, 500].map(v => (
+                  <div key={`b${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#222', padding: '5px', borderRadius: '4px', border: '1px solid #333' }}>
+                    <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold', color: 'var(--success-green)' }}>${v}</div>
+                    <input type="number" value={denoms[`b${v}`]} onChange={e => setDenoms({...denoms, [`b${v}`]: Number(e.target.value)})} style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} placeholder="0" />
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '10px', backgroundColor: 'var(--success-green)', color: 'black', padding: '8px', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold' }}>
+                TOTAL EFECTIVO: ${totalDenoms.toFixed(2)}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowShiftModal(false)} style={{ flex: 1 }}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleShiftAction} style={{ flex: 1 }}>Guardar Registro</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📐 Métricas Principales */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px' }}>
         <div className="card" style={{ marginBottom: '10px', padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '10px' }}>TOTAL DIDI</div>
           <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${currentDisposition.toFixed(2)}</div>
@@ -61,6 +163,18 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* 💳 Desglose Efectivo vs Tarjeta */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+        <div className="card" style={{ padding: '10px', borderTop: '2px solid var(--success-green)' }}>
+          <div className="card-title" style={{ fontSize: '9px' }}>COBRADO EN EFECTIVO</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoEfectivo.toFixed(2)}</div>
+        </div>
+        <div className="card" style={{ padding: '10px', borderTop: '2px solid #3498db' }}>
+          <div className="card-title" style={{ fontSize: '9px' }}>DEPÓSITO TARJETA</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#3498db' }}>${ingresoTarjeta.toFixed(2)}</div>
+        </div>
+      </div>
+
       {/* 📊 Progreso de Meta (Utilidad Real) */}
       <div className="card" style={{ marginTop: '0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -71,8 +185,8 @@ const Dashboard = () => {
           <div style={{ width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, height: '100%', backgroundColor: 'var(--didi-orange)', transition: 'width 0.5s ease' }}></div>
         </div>
         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-          {utilidadReal >= dailyGoal 
-            ? '✅ ¡META LOGRADA! Todo lo que entre ahora es ganancia pura.' 
+          {utilidadReal >= dailyGoal
+            ? '✅ ¡META LOGRADA! Todo lo que entre ahora es ganancia pura.'
             : `Faltan $${(dailyGoal - utilidadReal).toFixed(2)} para la meta de hoy.`}
         </p>
       </div>
@@ -200,7 +314,7 @@ const Audit = () => {
 const HistoryView = () => {
   const [entries, setEntries] = useState([]);
   const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
-  const [period, setPeriod] = useState('day'); 
+  const [period, setPeriod] = useState('day');
   const [loading, setLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState([]);
 
@@ -221,7 +335,7 @@ const HistoryView = () => {
       setLoading(false);
     };
     fetchHistory();
-    
+
     // Auto-detección de 'Hoy' para el color del botón
     if (date === new Date().toLocaleDateString('sv')) {
       setPeriod('day');
@@ -242,9 +356,9 @@ const HistoryView = () => {
     <div className="mobile-container">
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <h1>VIAJES</h1>
-        <input 
-          type="date" 
-          value={date} 
+        <input
+          type="date"
+          value={date}
           onChange={(e) => {
             setDate(e.target.value);
             setPeriod(''); // Al elegir fecha manual, limpiamos el periodo predefinido
@@ -266,7 +380,7 @@ const HistoryView = () => {
         (period === 'week' || period === 'month') ? (
           <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
             Consolidado {(period === 'week' ? 'semanal' : 'mensual')} próximamente. ✨
-            <br/><small style={{ fontSize: '10px' }}>Estamos preparando las tarjetas de rentabilidad acumulada.</small>
+            <br /><small style={{ fontSize: '10px' }}>Estamos preparando las tarjetas de rentabilidad acumulada.</small>
           </div>
         ) : entries.length === 0 ? (
           <div className="card" style={{ textAlign: 'center' }}>No hay viajes registrados en este periodo.</div>
@@ -384,7 +498,6 @@ const HistoryView = () => {
 // ⛽️ Cubo Fierro Component
 const CuboFierro = () => {
   const [files, setFiles] = useState([]);
-  const [kmAnterior, setKmAnterior] = useState('');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [receipts, setReceipts] = useState([]);
@@ -409,14 +522,12 @@ const CuboFierro = () => {
     setProgress('Procesando ticket con IA...');
     const formData = new FormData();
     files.forEach(f => formData.append('images', f));
-    formData.append('km_odometro_anterior', kmAnterior);
     try {
       const res = await fetch('http://localhost:3001/api/upload/fuel', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success) {
         setProgress('✅ Ticket registrado. Costo actualizado automáticamente.');
         setFiles([]);
-        setKmAnterior('');
         fetchHistory();
       } else {
         setProgress(`Error: ${data.error}`);
@@ -430,18 +541,18 @@ const CuboFierro = () => {
   return (
     <div className="mobile-container">
       <div className="header" style={{ textAlign: 'center' }}>
-        <h1>CUBO FIERRO</h1>
+        <h1>CARGAS DE GASOLINA</h1>
       </div>
 
       {/* 📊 Indicador de Costo Actual */}
       {latestCost && (
         <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: latestCost > 2.0 ? '4px solid var(--error-red)' : '4px solid var(--success-green)' }}>
           <div>
-            <div style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1px' }}>COSTO GASOLINA ACTUAL</div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: latestCost > 2.0 ? 'var(--error-red)' : 'var(--success-green)' }}>${latestCost.toFixed(2)}/km</div>
+            <div style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1px' }}>COSTO POR KM</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: latestCost > 2.0 ? 'var(--error-red)' : 'var(--success-green)' }}>${latestCost.toFixed(2)}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            {latestCost > 2.0 
+            {latestCost > 2.0
               ? <TrendingUp size={32} color="var(--error-red)" />
               : <TrendingDown size={32} color="var(--success-green)" />}
             <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>aplicado a nuevos viajes</div>
@@ -451,7 +562,7 @@ const CuboFierro = () => {
 
       {/* 📸 Cargador de Ticket */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 'bold' }}>Registrar Nueva Carga</div>
+        <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center' }}>Registrar Nueva Carga</div>
 
         <div style={{ position: 'relative', height: '120px', border: '2px dashed #444', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {files.length > 0 ? (
@@ -477,7 +588,7 @@ const CuboFierro = () => {
                   <Fuel size={14} color="var(--success-green)" />
                   <span style={{ fontSize: '11px', color: '#eee', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
                 </div>
-                <button 
+                <button
                   onClick={() => setFiles(files.filter((_, i) => i !== idx))}
                   style={{ background: 'none', border: 'none', color: 'var(--error-red)', cursor: 'pointer', padding: '4px' }}
                 >
@@ -485,8 +596,8 @@ const CuboFierro = () => {
                 </button>
               </div>
             ))}
-            <button 
-              onClick={() => setFiles([])} 
+            <button
+              onClick={() => setFiles([])}
               style={{ fontSize: '10px', color: 'var(--error-red)', textAlign: 'right', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
             >
               Limpiar todo
@@ -494,20 +605,11 @@ const CuboFierro = () => {
           </div>
         )}
 
-        <div>
-          <div style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '6px' }}>ODÓMETRO ANTERIOR (km apertura o última carga)</div>
-          <input
-            type="number"
-            value={kmAnterior}
-            onChange={(e) => setKmAnterior(e.target.value)}
-            placeholder="Ej: 195471"
-            style={{ width: '100%', padding: '10px', backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: '8px', color: 'white', fontSize: '16px', boxSizing: 'border-box' }}
-          />
-        </div>
+        {/* Odómetro eliminado conforme a solicitud */}
 
         {progress && <p style={{ color: 'var(--didi-orange)', fontSize: '12px', textAlign: 'center' }}>{progress}</p>}
 
-        <button className="btn btn-primary" disabled={files.length === 0 || !kmAnterior || loading} onClick={handleUpload}>
+        <button className="btn btn-primary" disabled={files.length === 0 || loading} onClick={handleUpload}>
           {loading ? 'Procesando con IA...' : '⛽ Registrar Carga'}
         </button>
       </div>
@@ -529,7 +631,7 @@ const CuboFierro = () => {
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{r.fecha} • {r.producto}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: isUp ? 'var(--error-red)' : 'var(--success-green)' }}>${Number(r.costo_real_km).toFixed(2)}/km</div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: isUp ? 'var(--error-red)' : 'var(--success-green)' }}>${Number(r.costo_real_km).toFixed(2)}</div>
                     {prevCost && <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{isUp ? '▲' : '▼'} vs anterior</div>}
                   </div>
                 </div>
@@ -589,7 +691,7 @@ function App() {
         </Link>
         <Link to="/cubo" className={`nav-item ${location.pathname === '/cubo' ? 'active' : ''}`}>
           <Fuel size={24} />
-          <span>Cubo</span>
+          <span>Cargas</span>
         </Link>
         <Link to="/profile" className={`nav-item ${location.pathname === '/profile' ? 'active' : ''}`}>
           <Settings size={24} />

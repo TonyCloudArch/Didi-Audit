@@ -12,15 +12,37 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// 🔄 Obtener Turno Activo
+router.get('/shifts/active', async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM shifts WHERE status = "OPEN" ORDER BY id DESC LIMIT 1');
+    res.json({ success: true, activeShift: rows[0] || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // 🎬 1. Iniciar Turno (Apertura)
 router.post('/shifts/open', async (req, res) => {
-  const { initial_odometer, initial_cash } = req.body;
+  const { initial_odometer, initial_cash, denominations } = req.body;
   try {
+    // Cerrar cualquier turno previo abierto
+    await db.execute('UPDATE shifts SET status = "CLOSED", end_time = NOW() WHERE status = "OPEN"');
     const [result] = await db.execute(
       'INSERT INTO shifts (initial_odometer, initial_cash, status) VALUES (?, ?, "OPEN")',
       [initial_odometer, initial_cash]
     );
+
+    // Guardar denominaciones si vienen
+    if (denominations) {
+      const { m1, m2, m5, m10, b20, b50, b100, b200, b500, total } = denominations;
+      await db.execute(
+        `INSERT INTO shift_denominations (shift_id, type, m1, m2, m5, m10, b20, b50, b100, b200, b500, total_calculated)
+         VALUES (?, 'OPEN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [result.insertId, m1||0, m2||0, m5||0, m10||0, b20||0, b50||0, b100||0, b200||0, b500||0, total||initial_cash]
+      );
+    }
+
     res.json({ id: result.insertId, status: 'OPEN' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -37,7 +59,9 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
     let shiftId = activeShift[0]?.id;
 
     if (!shiftId) {
-      const [newShift] = await db.execute('INSERT INTO shifts (initial_odometer, initial_cash, status) VALUES (?, ?, "OPEN")', [195258, 200]);
+      const [lastShift] = await db.execute('SELECT final_odometer FROM shifts ORDER BY id DESC LIMIT 1');
+      const startKm = lastShift[0]?.final_odometer || 195000;
+      const [newShift] = await db.execute('INSERT INTO shifts (initial_odometer, initial_cash, status) VALUES (?, ?, "OPEN")', [startKm, 200]);
       shiftId = newShift.insertId;
     }
 
@@ -131,14 +155,18 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         if (err.message.includes("429") || err.message.includes("Rate limit") || err.message.includes("Insufficient quota")) {
           break;
         }
+        results.push(aiData);
       }
     }
 
-    if (viajesProcesados > 0) {
-      res.json({ success: true, viajesProcesados, errorWarning: fallbackError });
-    } else {
-      res.status(500).json({ error: fallbackError || "Error desconocido procesando Lote" });
+    // Trigger de recalibración (ROI y Ganancia Real)
+    const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
+    if (fuelRows.length > 0) {
+      const latestPrice = Number(fuelRows[0].costo_real_km);
+      await db.execute('UPDATE entries SET ganancia_real = ganancias_desp_imp - (distancia * ?), roi_km = (ganancias_desp_imp - (distancia * ?)) / (CASE WHEN distancia = 0 THEN 1 ELSE distancia END) WHERE shift_id = ?', [latestPrice, latestPrice, shiftId]);
     }
+
+    res.json({ success: true, count: results.length });
 
   } catch (err) {
     console.error("Error global batch parsing:", err);
@@ -146,18 +174,29 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
   }
 });
 
-// ⛽️ 3. Cubo Fierro: Registrar Ticket de Gasolina (con IA)
+// ⛽️ 3. Cargar Ticket de Gasolina
 router.post('/upload/fuel', upload.array('images', 5), async (req, res) => {
   if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No images uploaded' });
-  const { km_odometro_anterior } = req.body;
-  if (!km_odometro_anterior) return res.status(400).json({ error: 'km_odometro_anterior es requerido' });
 
   try {
     const paths = req.files.map(f => f.path);
     const aiData = await parseFuelReceipt(paths);
 
-    // km_odometro_actual: si la IA lo leyó del odómetro en la imagen, úsalo. Si no, es error.
     const kmActual = Number(aiData.km_odometro_actual) || 0;
+
+    // DETERMINAR ODÓMETRO ANTERIOR AUTOMÁTICAMENTE
+    // Opción A: Del último ticket de gasolina
+    const [lastFuel] = await db.execute('SELECT km_odometro_actual FROM fuel_receipts ORDER BY id DESC LIMIT 1');
+    let kmAnterior = lastFuel[0]?.km_odometro_actual;
+
+    // Opción B: Si no hay tickets, del turno activo
+    if (!kmAnterior) {
+      const [lastShift] = await db.execute('SELECT initial_odometer FROM shifts WHERE status = "OPEN" ORDER BY id DESC LIMIT 1');
+      kmAnterior = lastShift[0]?.initial_odometer;
+    }
+
+    // Si aún no hay odómetro (ej: primer uso de la app), necesitamos uno inicial simbólico
+    if (!kmAnterior) kmAnterior = kmActual > 0 ? kmActual - 10 : 0;
 
     await db.execute(
       `INSERT INTO fuel_receipts (
@@ -175,7 +214,7 @@ router.post('/upload/fuel', upload.array('images', 5), async (req, res) => {
         aiData.importe_sin_iva || 0,
         aiData.importe_iva || 0,
         aiData.total_pagado || 0,
-        Number(km_odometro_anterior),
+        kmAnterior,
         kmActual,
         aiData.forma_pago || 'Efectivo',
         JSON.stringify(aiData)
@@ -229,7 +268,7 @@ router.post('/expenses', async (req, res) => {
 
 // 🛑 4. Cerrar Turno (Corte de Caja)
 router.post('/shifts/close', async (req, res) => {
-  const { shift_id, final_odometer, final_cash_counted } = req.body;
+  const { shift_id, final_odometer, final_cash_counted, denominations } = req.body;
   try {
     // Calcular totales usando nombres exactos
     const [entries] = await db.execute('SELECT SUM(ganancias_desp_imp) as total_neto, SUM(distancia) as total_km FROM entries WHERE shift_id = ?', [shift_id]);
@@ -240,6 +279,16 @@ router.post('/shifts/close', async (req, res) => {
     const totalExp = Number(expenses[0].total_exp || 0);
     const expectedCash = shift[0].initial_cash + totalNeto - totalExp;
     const difference = final_cash_counted - expectedCash;
+
+    // Guardar denominaciones si vienen
+    if (denominations) {
+      const { m1, m2, m5, m10, b20, b50, b100, b200, b500, total } = denominations;
+      await db.execute(
+        `INSERT INTO shift_denominations (shift_id, type, m1, m2, m5, m10, b20, b50, b100, b200, b500, total_calculated)
+         VALUES (?, 'CLOSE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [shift_id, m1||0, m2||0, m5||0, m10||0, b20||0, b50||0, b100||0, b200||0, b500||0, total||final_cash_counted]
+      );
+    }
 
     // Semáforo: ROI sobre distancia total del turno
     const dist = final_odometer - shift[0].initial_odometer;
@@ -312,10 +361,12 @@ router.get('/dashboard', async (req, res) => {
         COALESCE(SUM(ganancia_real), 0) as utilidadReal,
         (COALESCE(SUM(ganancias_desp_imp), 0) - COALESCE(SUM(ganancia_real), 0)) as gastoGasolina,
         COALESCE(AVG(roi_km), 0) as roiPromedio,
-        COALESCE(SUM(distancia), 0) as total_km
+        COALESCE(SUM(distancia), 0) as total_km,
+        COALESCE(SUM(CASE WHEN metodo_pago = 'En efectivo' THEN efectivo_recibido ELSE 0 END), 0) as ingresoEfectivo,
+        COALESCE(SUM(CASE WHEN metodo_pago = 'Electrónico' THEN tus_ganancias ELSE 0 END), 0) as ingresoTarjeta
       FROM entries 
-      WHERE DATE(CONVERT_TZ(created_at, "+00:00", "-07:00")) = ? 
-         OR DATE(fecha_hora_viaje) = ?
+      WHERE (DATE(CONVERT_TZ(created_at, "+00:00", "-07:00")) = ? 
+          OR DATE(fecha_hora_viaje) = ?)
     `, [targetDate, targetDate]);
 
     const result = stats[0] || {};
@@ -325,7 +376,9 @@ router.get('/dashboard', async (req, res) => {
       utilidadReal: Number(result.utilidadReal || 0),
       gastoGasolina: Number(result.gastoGasolina || 0),
       roi: Number(result.roiPromedio || 0),
-      totalKmDidi: Number(result.total_km || 0)
+      totalKmDidi: Number(result.total_km || 0),
+      ingresoEfectivo: Number(result.ingresoEfectivo || 0),
+      ingresoTarjeta: Number(result.ingresoTarjeta || 0)
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
