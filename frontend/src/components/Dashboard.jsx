@@ -77,9 +77,9 @@ const Dashboard = () => {
         <div>
           <h1>Mazatlán Audit Pro</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
-            {activeShift 
-              ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` 
-              : (date === new Date().toLocaleDateString('sv') ? '🟢 TURNO EN CURSO' : '🔴 TURNO CERRADO')}
+            {date !== new Date().toLocaleDateString('sv') 
+              ? '🔴 HISTÓRICO / CERRADO' 
+              : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
           </p>
         </div>
         <input
@@ -101,14 +101,26 @@ const Dashboard = () => {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO'}</div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+              {date !== new Date().toLocaleDateString('sv') ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')}
+            </div>
           </div>
           <button 
             onClick={() => setShowShiftModal(true)}
-            className={`btn ${activeShift ? 'btn-secondary' : 'btn-primary'}`} 
-            style={{ fontSize: '11px', padding: '8px 16px', borderRadius: '20px' }}
+            className="btn"
+            style={{ 
+              fontSize: '11px', 
+              padding: '8px 16px', 
+              borderRadius: '20px',
+              backgroundColor: date !== new Date().toLocaleDateString('sv') ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)'),
+              color: date !== new Date().toLocaleDateString('sv') ? '#777' : (activeShift ? '#fff' : '#000'),
+              fontWeight: 'bold',
+              border: 'none',
+              cursor: date !== new Date().toLocaleDateString('sv') ? 'not-allowed' : 'pointer'
+            }}
+            disabled={date !== new Date().toLocaleDateString('sv')}
           >
-            {activeShift ? '🚩 Finalizar' : '🚀 Iniciar'}
+            {date !== new Date().toLocaleDateString('sv') ? '✔️ Terminado' : (activeShift ? '🚩 Finalizar' : '🚀 Iniciar')}
           </button>
         </div>
       </div>
