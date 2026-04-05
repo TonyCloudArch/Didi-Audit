@@ -139,13 +139,18 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
         // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática real en el Servidor)
         // 🧠 LÓGICA DE AUDITORÍA MAESTRA (Matemática Operativa Real)
         const d = Number(aiData.distancia) || 0;
-        const n = Number(aiData.tus_ganancias) || 0; // Se utiliza el Ingreso Bruto Operacional
-        const roi = d > 0 ? (n / d) : 0;
-
-        // ⛽️ Costo dinámico: toma el más reciente de fuel_receipts
+        const n = Number(aiData.tus_ganancias) || 0; 
+        const n_neto = Number(aiData.ganancias_desp_imp) || n; // Neto DiDi
+        
+        // ⛽️ Costo dinámico de gas
         const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
-        const gasCostPerKm = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27; // fallback si no hay ticket aún
-        const profitReal = n - (d * gasCostPerKm);
+        const gasCostPerKm = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27; 
+        
+        const gasTotal = d * gasCostPerKm;
+        const profitReal = n_neto - gasTotal; // Utilidad final en mano (dinero real)
+        
+        // ROI de Ingreso Neto (Pago / KM) para escala de colores $8+
+        const roi = d > 0 ? (n_neto / d) : 0;
 
         // El Juez Mazatleco decide:
         let calificacion = "Ineficiente";
