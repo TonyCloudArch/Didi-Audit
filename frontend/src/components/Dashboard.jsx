@@ -121,34 +121,34 @@ const Dashboard = () => {
       {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
       <div className="card" style={{ 
         padding: '12px', 
-        borderLeft: activeShift ? '4px solid var(--didi-orange)' : '4px solid #444', 
-        background: activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)',
-        opacity: date !== new Date().toLocaleDateString('sv') ? 0.4 : 1,
-        filter: date !== new Date().toLocaleDateString('sv') ? 'grayscale(1)' : 'none',
-        pointerEvents: date !== new Date().toLocaleDateString('sv') ? 'none' : 'auto'
+        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : '4px solid #444'), 
+        background: isRestDay ? 'rgba(52,152,219,0.05)' : (activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)'),
+        opacity: (date !== new Date().toLocaleDateString('sv') && !isRestDay) ? 0.4 : 1,
+        filter: (date !== new Date().toLocaleDateString('sv') && !isRestDay) ? 'grayscale(1)' : 'none',
+        pointerEvents: (date !== new Date().toLocaleDateString('sv') && !isRestDay) ? 'none' : 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
-              {date !== new Date().toLocaleDateString('sv') ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')}
+              {isRestDay ? 'DÍA DE DESCANSO' : (date !== new Date().toLocaleDateString('sv') ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO'))}
             </div>
           </div>
           <button 
-            onClick={() => setShowShiftModal(true)}
+            onClick={() => !isRestDay && setShowShiftModal(true)}
             className="btn"
             style={{ 
               fontSize: '11px', 
               padding: '8px 16px', 
               borderRadius: '20px',
-              backgroundColor: date !== new Date().toLocaleDateString('sv') ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)'),
-              color: date !== new Date().toLocaleDateString('sv') ? '#777' : (activeShift ? '#fff' : '#000'),
+              backgroundColor: isRestDay ? '#1a1a1a' : (date !== new Date().toLocaleDateString('sv') ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)')),
+              color: isRestDay ? '#555' : (date !== new Date().toLocaleDateString('sv') ? '#777' : (activeShift ? '#fff' : '#000')),
               fontWeight: 'bold',
-              border: 'none',
-              cursor: date !== new Date().toLocaleDateString('sv') ? 'not-allowed' : 'pointer'
+              border: isRestDay ? '1px dashed #444' : 'none',
+              cursor: (isRestDay || date !== new Date().toLocaleDateString('sv')) ? 'not-allowed' : 'pointer'
             }}
-            disabled={date !== new Date().toLocaleDateString('sv')}
+            disabled={isRestDay || date !== new Date().toLocaleDateString('sv')}
           >
-            {date !== new Date().toLocaleDateString('sv') ? '✔️ Terminado' : (activeShift ? '🚩 Finalizar' : '🚀 Iniciar')}
+            {isRestDay ? 'Descansando 💤' : (date !== new Date().toLocaleDateString('sv') ? '✔️ Terminado' : (activeShift ? '🚩 Finalizar' : '🚀 Iniciar'))}
           </button>
         </div>
       </div>

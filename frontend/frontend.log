@@ -3,8 +3,9 @@
 > vite
 
 
-  VITE v5.4.21  ready in 508 ms
+  VITE v5.4.21  ready in 653 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
   ➜  press h + enter to show help
+11:04:19 PM [vite] hmr update /src/components/Dashboard.jsx

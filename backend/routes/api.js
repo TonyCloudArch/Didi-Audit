@@ -72,13 +72,8 @@ router.post('/shifts/rest', async (req, res) => {
       return res.status(400).json({ error: 'No se puede marcar como descanso: Detectamos viajes registrados en esta fecha.' });
     }
 
-    // 🛡️ 3. Verificar que no haya tickets de gasolina
-    console.log('[REST] Verificando gasolina...');
-    const [existingFuel] = await db.execute("SELECT id FROM fuel_receipts WHERE DATE(fecha) = ? OR DATE(created_at) = ?", [date, date]);
-    if (existingFuel.length > 0) {
-      console.log('[REST] Error: Hay gasolina.');
-      return res.status(400).json({ error: 'Hay cargas de gasolina en este día. No es posible marcar descanso.' });
-    }
+
+    // ✅ Si todo está vacío (vuelo real y viajes), procedemos al registro del descanso
 
     // ✅ Si todo está vacío, procedemos al registro del descanso
     console.log('[REST] Registrando descanso...');

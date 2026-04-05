@@ -1,13 +1,8 @@
 
-> backend@1.0.0 dev
-> nodemon index.js
+> backend@1.0.0 start
+> node index.js
 
-[33m[nodemon] 3.1.14[39m
-[33m[nodemon] to restart at any time, enter `rs`[39m
-[33m[nodemon] watching path(s): *.*[39m
-[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
-[32m[nodemon] starting `node index.js`[39m
-◇ injecting env (6) from .env // tip: ⌘ override existing { override: true }
-◇ injecting env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-◇ injecting env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injecting env (6) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injecting env (0) from .env // tip: ⌘ override existing { override: true }
+◇ injecting env (0) from .env // tip: ⌘ override existing { override: true }
 🚀 Auditor Maestro en servicio puerto: 3001

@@ -1,0 +1,8 @@
+
+> backend@1.0.0 start
+> node index.js
+
+◇ injecting env (6) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injecting env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injecting env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+🚀 Auditor Maestro en servicio puerto: 3001
