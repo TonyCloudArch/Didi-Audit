@@ -81,7 +81,7 @@ async function parseDidiReport(imagePaths) {
         - Si detectas que las imágenes corresponden a DOS documentos distintos (ej: una recompensa y un viaje, o dos bonos distintos), crea dos objetos en el array "documentos".
         - Si ambas imágenes son del mismo viaje (detalle ganancias + mapa), crea UN solo objeto con los datos consolidados.
         - "tipo_documento": Identifica con precisión si es un viaje completado, cancelación pagada, bono de meta o ticket de gasolina.
-        - "recompensa": Si ves "Viaja más, gana más", usa este tipo y extrae el monto total como tus_ganancias y monto_recompensa.
+        - "recompensa": Si ves "Viaja más, gana más", usa este tipo y extrae el monto total como tus_ganancias y monto_recompensa. BUSCA CUALQUIER FECHA en la imagen para "fecha_hora_viaje" (ej: "4 de abr", "Hoy", etc).
         - "cancelacion": Si ves "Tar. cancel. dinám.", extrae el monto en tus_ganancias.
         - "gasolina": BUSCA LA FECHA REAL DEL TICKET (ej: 04/04/2026). Es vital para la auditoría.
         - "is_valid": Solo false si la imagen no tiene nada que ver con lo anterior.

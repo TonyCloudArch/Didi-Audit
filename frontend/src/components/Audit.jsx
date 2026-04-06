@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 
 const Audit = () => {
+  const [searchParams] = useSearchParams();
+  const targetDate = searchParams.get('date');
+  
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
@@ -13,6 +17,7 @@ const Audit = () => {
 
     const formData = new FormData();
     files.forEach(f => formData.append('images', f));
+    if (targetDate) formData.append('targetDate', targetDate);
 
     try {
       const res = await fetch('http://localhost:3001/api/upload/batch', {

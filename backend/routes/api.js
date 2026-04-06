@@ -107,9 +107,20 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
 
   try {
     // Buscar o auto-crear turno si no hay uno
-    const [activeShift] = await db.execute('SELECT id FROM shifts WHERE status = "OPEN" ORDER BY id DESC LIMIT 1');
+    const [activeShift] = await db.execute('SELECT id, DATE(start_time) as shift_date FROM shifts WHERE status = "OPEN" ORDER BY id DESC LIMIT 1');
     let shiftId = activeShift[0]?.id;
-
+    
+    // Fallback de fecha inteligente:
+    // 1. Prioridad: Fecha que el usuario tiene seleccionada en el navegador (si viene en req.body)
+    // 2. Segunda: Fecha del turno abierto actual
+    // 3. Tercera: Fecha de hoy
+    let shiftDateFallback = new Date().toLocaleDateString('es-MX');
+    if (req.body.targetDate) {
+      const td = req.body.targetDate.split('-');
+      shiftDateFallback = `${td[2]}/${td[1]}/${td[0]}`; // Convertir YYYY-MM-DD a DD/MM/YYYY
+    } else if (activeShift[0]?.shift_date) {
+      shiftDateFallback = new Date(activeShift[0].shift_date).toLocaleDateString('es-MX');
+    }
     if (!shiftId) {
       const [lastShift] = await db.execute('SELECT final_odometer FROM shifts ORDER BY id DESC LIMIT 1');
       const startKm = lastShift[0]?.final_odometer || 195000;
@@ -210,22 +221,24 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
               else calificacion = "Fatal";
             }
 
-            await db.execute(
-              `INSERT INTO entries (
-                shift_id, tipo, concepto_especial, pasajero_nombre, distancia, duracion, 
-                fecha_hora_viaje, origen_direccion, destino_direccion, 
-                tipo_vehiculo, metodo_pago, efectivo_recibido, 
-                pagado_por_el_pasajero, tus_ganancias, ganancias_antes_imp, 
-                tarifa_del_viaje, tarifa_base_total, tarifa_de_servicio, 
-                cuota_de_solicitud, tarifa_dinamica, monto_adicional_por_gasolina, 
-                impuesto, ganancias_desp_imp, ganancia_real,
-                roi_km, calificacion_seleccion, raw_data_json
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                shiftId, aiData.tipo_documento, aiData.concepto_especial || null,
-                aiData.pasajero_nombre || (aiData.tipo_documento === 'recompensa' ? 'META CUMPLIDA' : 'App DiDi'),
-                d, aiData.duracion || '-',
-                aiData.fecha_hora_viaje || '-', aiData.origen_direccion || '-', aiData.destino_direccion || '-',
+              const finalDate = (aiData.fecha_hora_viaje && aiData.fecha_hora_viaje !== '-') ? aiData.fecha_hora_viaje : shiftDateFallback;
+
+              await db.execute(
+                `INSERT INTO entries (
+                  shift_id, tipo, concepto_especial, pasajero_nombre, distancia, duracion, 
+                  fecha_hora_viaje, origen_direccion, destino_direccion, 
+                  tipo_vehiculo, metodo_pago, efectivo_recibido, 
+                  pagado_por_el_pasajero, tus_ganancias, ganancias_antes_imp, 
+                  tarifa_del_viaje, tarifa_base_total, tarifa_de_servicio, 
+                  cuota_de_solicitud, tarifa_dinamica, monto_adicional_por_gasolina, 
+                  impuesto, ganancias_desp_imp, ganancia_real,
+                  roi_km, calificacion_seleccion, raw_data_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  shiftId, aiData.tipo_documento, aiData.concepto_especial || null,
+                  aiData.pasajero_nombre || (aiData.tipo_documento === 'recompensa' ? 'META CUMPLIDA' : 'App DiDi'),
+                  d, aiData.duracion || '-',
+                  finalDate, aiData.origen_direccion || '-', aiData.destino_direccion || '-',
                 aiData.tipo_vehiculo || '-', aiData.metodo_pago || 'Desconocido', aiData.efectivo_recibido || 0,
                 aiData.pagado_por_el_pasajero || 0, n, aiData.tus_ganancias || n, 
                 0, aiData.otras_deducciones_app || 0, aiData.tarifa_de_servicio || 0, 
