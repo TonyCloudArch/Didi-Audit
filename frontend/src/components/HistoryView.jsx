@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, Fuel, CreditCard } from 'lucide-react';
 
 const HistoryView = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
+
   const [entries, setEntries] = useState([]);
-  const [date, setDate] = useState(() => localStorage.getItem('shared_audit_date') || new Date().toLocaleDateString('sv'));
-  const [period, setPeriod] = useState('day');
+  const [date, setDate] = useState(initialDate);
+  const [period, setPeriod] = useState(searchParams.get('date') ? '' : 'day');
   const [loading, setLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState([]);
   const [privateMode, setPrivateMode] = useState(false);
@@ -124,8 +128,9 @@ const HistoryView = () => {
           type="date"
           value={date}
           onChange={(e) => {
-            setDate(e.target.value);
-            setPeriod('');
+            const newDate = e.target.value;
+            setDate(newDate);
+            setSearchParams({ date: newDate });
           }}
           style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
         />
@@ -175,6 +180,8 @@ const HistoryView = () => {
           <div className="card" style={{ textAlign: 'center' }}>No hay viajes registrados en este periodo.</div>
         ) : (
           entries.map((entry) => {
+            const isRecompensa = entry.tipo === 'recompensa';
+            const isCancelacion = entry.tipo === 'cancelacion';
             const isPrivate = entry.tipo === 'privado';
             const isGolden = !isPrivate && entry.calificacion_seleccion === 'Boleto Dorado';
             const isSuperElite = !isPrivate && entry.calificacion_seleccion === 'Súper Élite';
@@ -182,7 +189,7 @@ const HistoryView = () => {
             const isFatal = !isPrivate && entry.calificacion_seleccion === 'Fatal';
             const isExpanded = expandedIds.includes(entry.id + (entry.tipo || ''));
 
-            const statusColor = isPrivate ? '#3498db' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)'))));
+            const statusColor = isPrivate ? '#3498db' : (isRecompensa ? 'var(--success-green)' : (isCancelacion ? 'var(--didi-orange)' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)'))))));
 
             return (
               <div key={entry.id + (entry.tipo || '')} onClick={() => toggleExpand(entry.id + (entry.tipo || ''))} className="card" style={{
@@ -198,14 +205,14 @@ const HistoryView = () => {
                     </div>
                   </div>
                   <div style={{ width: '20%', textAlign: 'center' }}>
-                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>DURACION</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                      {entry.duracion ? entry.duracion.replace('32s', 'm').replace(' ', '') : '--'}
+                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>{isRecompensa ? 'TIPO' : 'DURACION'}</div>
+                    <div style={{ fontSize: '14px', color: isRecompensa ? 'var(--success-green)' : 'var(--text-muted)' }}>
+                      {isRecompensa ? 'BONO' : (entry.duracion ? entry.duracion.replace('32s', 'm').replace(' ', '') : '--')}
                     </div>
                   </div>
                   <div style={{ width: '20%', textAlign: 'center' }}>
-                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>DISTANCIA</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>{isCancelacion ? 'CANC.' : 'DISTANCIA'}</div>
+                    <div style={{ fontSize: '14px', color: isCancelacion ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
                       {entry.distancia}
                     </div>
                   </div>
@@ -248,7 +255,7 @@ const HistoryView = () => {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Comisión DiDi Estimada</span>
-                        <span style={{ color: 'var(--error-red)' }}>-${(parseFloat(entry.tarifa_de_servicio) + parseFloat(entry.cuota_de_solicitud)).toFixed(2)}</span>
+                        <span style={{ color: 'var(--error-red)' }}>-${Math.abs(parseFloat(entry.tarifa_de_servicio || 0) + parseFloat(entry.cuota_de_solicitud || 0) + parseFloat(entry.tarifa_base_total || 0)).toFixed(2)}</span>
                       </div>
                       {entry.tarifa_dinamica !== 'No aplica' && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
@@ -261,8 +268,8 @@ const HistoryView = () => {
                         <span style={{ color: 'var(--success-green)' }}>+${parseFloat(entry.monto_adicional_por_gasolina).toFixed(2)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{entry.impuesto_tipo || 'Impuesto'}</span>
-                        <span style={{ color: 'var(--error-red)' }}>-${parseFloat(entry.impuesto).toFixed(2)}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{entry.impuesto_tipo || 'Impuesto (IVA/Local)'}</span>
+                        <span style={{ color: 'var(--error-red)' }}>-${Math.abs(parseFloat(entry.impuesto || 0)).toFixed(2)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #333', paddingTop: '10px', marginTop: '5px', fontWeight: 'bold' }}>
                         <span>Utilidad Neta (Fin)</span>
@@ -296,7 +303,7 @@ const HistoryView = () => {
                       </div>
                       <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right' }}>
                         <CreditCard size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                        {entry.metodo_pago} {entry.metodo_pago === 'En efectivo' ? `($${parseFloat(entry.efectivo_received || entry.efectivo_recibido).toFixed(2)})` : ''}
+                        {entry.metodo_pago} {entry.metodo_pago.toLowerCase().includes('efectivo') ? `($${parseFloat(entry.efectivo_recibido || entry.pagado_por_el_pasajero || 0).toFixed(2)})` : ''}
                       </div>
                     </div>
                   </div>
