@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown, Target, Zap } from 'lucide-react';
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
-  
+
   const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(initialDate);
   const [activeShift, setActiveShift] = useState(null);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [shiftInputs, setShiftInputs] = useState({ odometer: '', cash: '' });
-  const [denoms, setDenoms] = useState({ m1:0, m2:0, m5:0, m10:0, b20:0, b50:0, b100:0, b200:0, b500:0 });
+  const [denoms, setDenoms] = useState({ m1: 0, m2: 0, m5: 0, m10: 0, b20: 0, b50: 0, b100: 0, b200: 0, b500: 0 });
   const dailyGoal = 500.00;
   const [showRestDayModal, setShowRestDayModal] = useState(false);
 
-  const totalDenoms = (denoms.m1*1) + (denoms.m2*2) + (denoms.m5*5) + (denoms.m10*10) + (denoms.b20*20) + (denoms.b50*50) + (denoms.b100*100) + (denoms.b200*200) + (denoms.b500*500);
+  const totalDenoms = (denoms.m1 * 1) + (denoms.m2 * 2) + (denoms.m5 * 5) + (denoms.m10 * 10) + (denoms.b20 * 20) + (denoms.b50 * 50) + (denoms.b100 * 100) + (denoms.b200 * 200) + (denoms.b500 * 500);
 
   const checkShift = () => {
     fetch('http://localhost:3001/api/shifts/active')
@@ -24,7 +24,7 @@ const Dashboard = () => {
       .then(d => { if (d.success) setActiveShift(d.activeShift); });
   };
 
-  useEffect(() => {
+  const fetchDashboardData = () => {
     setLoading(true);
     checkShift();
     setStats({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, isRestDay: false });
@@ -51,12 +51,16 @@ const Dashboard = () => {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, [date]);
 
   const handleShiftAction = async () => {
     const isOpening = !activeShift;
     const url = isOpening ? 'http://localhost:3001/api/shifts/open' : 'http://localhost:3001/api/shifts/close';
-    const body = isOpening 
+    const body = isOpening
       ? { initial_odometer: Number(shiftInputs.odometer), initial_cash: totalDenoms || Number(shiftInputs.cash), denominations: { ...denoms, total: totalDenoms } }
       : { shift_id: activeShift.id, final_odometer: Number(shiftInputs.odometer), final_cash_counted: totalDenoms || Number(shiftInputs.cash), denominations: { ...denoms, total: totalDenoms } };
 
@@ -65,12 +69,12 @@ const Dashboard = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    
+
     if (res.ok) {
       setShowShiftModal(false);
       setShiftInputs({ odometer: '', cash: '' });
-      setDenoms({ m1:0, m2:0, m5:0, m10:0, b20:0, b50:0, b100:0, b200:0, b500:0 });
-      checkShift();
+      setDenoms({ m1: 0, m2: 0, m5: 0, m10: 0, b20: 0, b50: 0, b100: 0, b200: 0, b500: 0 });
+      fetchDashboardData();
     }
   };
 
@@ -83,12 +87,12 @@ const Dashboard = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setStats(prev => ({ ...prev, isRestDay: true }));
         setShowRestDayModal(false);
+        fetchDashboardData();
       } else {
         alert(data.error || "Error al registrar descanso");
       }
-    } catch(err) {
+    } catch (err) {
       alert("Error de conexión");
     }
   };
@@ -104,18 +108,18 @@ const Dashboard = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              En Caja 
+              En Caja
               <span style={{ color: 'var(--text-main)', fontSize: '20px' }}>${currentDisposition.toFixed(2)}</span>
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '2px', marginBottom: 0 }}>
-              {isRestDay 
+              {isRestDay
                 ? '🔵 DÍA DESCANSADO'
                 : isFuture
                   ? '📅 FECHA FUTURA / INACTIVO'
-                  : (activeShift && activeShift.status === 'OPEN') 
+                  : (activeShift && activeShift.status === 'OPEN')
                     ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})`
-                    : isPast 
-                      ? '🔴 HISTÓRICO / CERRADO' 
+                    : isPast
+                      ? '🔴 HISTÓRICO / CERRADO'
                       : '🟡 ESPERANDO INICIO DE TURNO'}
             </p>
           </div>
@@ -133,9 +137,9 @@ const Dashboard = () => {
       </div>
 
       {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
-      <div className="card" style={{ 
-        padding: '12px', 
-        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : (isFuture ? '4px solid #222' : '4px solid #444')), 
+      <div className="card" style={{
+        padding: '12px',
+        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : (isFuture ? '4px solid #222' : '4px solid #444')),
         background: isRestDay ? 'rgba(52,152,219,0.05)' : (activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)'),
         opacity: (isFuture || (isPast && !activeShift)) ? 0.4 : 1,
         filter: (isFuture || (isPast && !activeShift)) ? 'grayscale(1)' : 'none',
@@ -147,12 +151,12 @@ const Dashboard = () => {
               {isRestDay ? 'DÍA DE DESCANSO' : (isFuture ? 'SIN ACTIVIDAD' : (isPast ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')))}
             </div>
           </div>
-          <button 
+          <button
             onClick={() => !isRestDay && !isFuture && setShowShiftModal(true)}
             className="btn"
-            style={{ 
-              fontSize: '11px', 
-              padding: '8px 16px', 
+            style={{
+              fontSize: '11px',
+              padding: '8px 16px',
               borderRadius: '20px',
               backgroundColor: (isRestDay || isFuture) ? '#1a1a1a' : (isPast && !activeShift ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)')),
               color: (isRestDay || isFuture) ? '#555' : (isPast && !activeShift ? '#777' : (activeShift ? '#fff' : '#000')),
@@ -171,15 +175,15 @@ const Dashboard = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ fontSize: '14px', textAlign: 'center' }}>{activeShift ? 'CIERRE DE JORNADA' : 'INICIO DE JORNADA'}</h3>
-            
+
             <div>
               <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>ODÓMETRO TOTAL</div>
-              <input 
-                type="number" 
-                value={shiftInputs.odometer} 
-                onChange={e => setShiftInputs({...shiftInputs, odometer: e.target.value})}
-                placeholder="Ej: 195471" 
-                style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', color: 'white', borderRadius: '6px' }} 
+              <input
+                type="number"
+                value={shiftInputs.odometer}
+                onChange={e => setShiftInputs({ ...shiftInputs, odometer: e.target.value })}
+                placeholder="Ej: 195471"
+                style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', color: 'white', borderRadius: '6px' }}
               />
             </div>
 
@@ -189,26 +193,26 @@ const Dashboard = () => {
                 {[1, 2, 5, 10].map(v => (
                   <div key={`m${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#1a1a1a', padding: '5px', borderRadius: '4px' }}>
                     <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold' }}>${v}</div>
-                    <input 
-                      type="number" 
-                      value={denoms[`m${v}`] === 0 ? '' : denoms[`m${v}`]} 
-                      onChange={e => setDenoms({...denoms, [`m${v}`]: Number(e.target.value)})} 
+                    <input
+                      type="number"
+                      value={denoms[`m${v}`] === 0 ? '' : denoms[`m${v}`]}
+                      onChange={e => setDenoms({ ...denoms, [`m${v}`]: Number(e.target.value) })}
                       onFocus={e => e.target.select()}
-                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} 
-                      placeholder="0" 
+                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }}
+                      placeholder="0"
                     />
                   </div>
                 ))}
                 {[20, 50, 100, 200, 500].map(v => (
                   <div key={`b${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#222', padding: '5px', borderRadius: '4px', border: '1px solid #333' }}>
                     <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold', color: 'var(--success-green)' }}>${v}</div>
-                    <input 
-                      type="number" 
-                      value={denoms[`b${v}`] === 0 ? '' : denoms[`b${v}`]} 
-                      onChange={e => setDenoms({...denoms, [`b${v}`]: Number(e.target.value)})} 
+                    <input
+                      type="number"
+                      value={denoms[`b${v}`] === 0 ? '' : denoms[`b${v}`]}
+                      onChange={e => setDenoms({ ...denoms, [`b${v}`]: Number(e.target.value) })}
                       onFocus={e => e.target.select()}
-                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} 
-                      placeholder="0" 
+                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }}
+                      placeholder="0"
                     />
                   </div>
                 ))}
@@ -246,30 +250,30 @@ const Dashboard = () => {
       )}
 
       {/* 🧠 Inteligencia Financiera (ROI Diario) */}
-      <div className="card" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
+      <div className="card" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: '10px',
         opacity: isFuture ? 0.3 : 1
       }}>
         <div>
           <div className="card-title">Selección IQ (ROI Real)</div>
-          <div style={{ 
-            fontSize: '28px', 
-            fontWeight: 'bold', 
+          <div style={{
+            fontSize: '28px',
+            fontWeight: 'bold',
             color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)'))))
           }}>
             ${roi.toFixed(2)}<span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/km</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <span style={{ 
-            backgroundColor: isFuture ? '#1a1a1a' : (roi >= 20 ? 'rgba(255,215,0,0.1)' : (roi >= 12 ? 'rgba(0,229,255,0.1)' : (roi >= 8 ? 'rgba(0,209,102,0.1)' : (roi >= 6 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)')))), 
+          <span style={{
+            backgroundColor: isFuture ? '#1a1a1a' : (roi >= 20 ? 'rgba(255,215,0,0.1)' : (roi >= 12 ? 'rgba(0,229,255,0.1)' : (roi >= 8 ? 'rgba(0,209,102,0.1)' : (roi >= 6 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)')))),
             color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)')))),
-            padding: '4px 8px', 
-            borderRadius: '4px', 
-            fontSize: '10px', 
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '10px',
             fontWeight: 'bold',
             boxShadow: roi >= 20 ? '0 0 10px rgba(255,215,0,0.3)' : 'none'
           }}>
@@ -305,7 +309,7 @@ const Dashboard = () => {
       {/* 🎭 La Auditoría Maestra Financiera */}
       <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cascada Financiera de Rentabilidad</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px', marginBottom: '10px', opacity: isFuture ? 0.3 : 1 }}>
-        
+
         {/* ROW 1: Espejismos y Bonos */}
         <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TOTAL INGRESO (FICTICIO)</div>
@@ -325,7 +329,7 @@ const Dashboard = () => {
           <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>DEPÓSITO TARJETA</div>
           <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoTarjeta.toFixed(2)}</div>
         </div>
-        
+
         {/* ROW 3: Evasiones y Costos Adheridos (Las "Mordidas" operativas) */}
         <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TAJADA DE LA APP (DIDI)</div>
@@ -358,7 +362,7 @@ const Dashboard = () => {
           <div style={{ width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, height: '100%', backgroundColor: 'var(--didi-orange)', transition: 'width 0.5s ease' }}></div>
         </div>
         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-          {isFuture 
+          {isFuture
             ? 'Aún no se puede registrar progreso en el futuro.'
             : utilidadReal >= dailyGoal
               ? '✅ ¡META LOGRADA! Todo lo que entre ahora es ganancia pura.'
@@ -369,7 +373,7 @@ const Dashboard = () => {
 
 
       {/* Backfill controls */}
-      { !isRestDay && !isFuture && activeShift && (
+      {!isRestDay && !isFuture && activeShift && (
         <div style={{ marginTop: '10px' }}>
           <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ flexDirection: 'column', height: '110px', fontSize: '15px', width: '100%', gap: '10px' }}>
             <Camera size={38} />
@@ -379,7 +383,7 @@ const Dashboard = () => {
       )}
 
       {/* Rest day control */}
-      { !isRestDay && !isFuture && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || isPast)) && (
+      {!isRestDay && !isFuture && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || isPast)) && (
         <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
           💤 Marcar como Día Descansado
         </button>

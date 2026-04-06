@@ -109,7 +109,7 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
     // Buscar o auto-crear turno si no hay uno
     const [activeShift] = await db.execute('SELECT id, DATE(start_time) as shift_date FROM shifts WHERE status = "OPEN" ORDER BY id DESC LIMIT 1');
     let shiftId = activeShift[0]?.id;
-    
+
     // Fallback de fecha inteligente:
     // 1. Prioridad: Fecha que el usuario tiene seleccionada en el navegador (si viene en req.body)
     // 2. Segunda: Fecha del turno abierto actual
@@ -138,7 +138,7 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
     for (let i = 0; i < req.files.length; i += 2) {
       try {
         const paths = [req.files[i].path];
-        if (req.files[i+1]) paths.push(req.files[i+1].path);
+        if (req.files[i + 1]) paths.push(req.files[i + 1].path);
 
         const aiResponse = await parseDidiReport(paths);
         const documentos = aiResponse.documentos || [aiResponse]; // Fallback por si acaso
@@ -197,7 +197,7 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
               continue;
             }
             global.recentUploads.add(dupKey);
-            setTimeout(() => global.recentUploads.delete(dupKey), 60000); 
+            setTimeout(() => global.recentUploads.delete(dupKey), 60000);
 
             // 🛡️ ESCUDO ANTI-DUPLICADOS (Base de Datos)
             // No guardamos si ya existe el mismo tipo, fecha y monto neto (Ignoramos pasajero por ser variable)
@@ -221,10 +221,10 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
               else calificacion = "Fatal";
             }
 
-              const finalDate = (aiData.fecha_hora_viaje && aiData.fecha_hora_viaje !== '-') ? aiData.fecha_hora_viaje : shiftDateFallback;
+            const finalDate = (aiData.fecha_hora_viaje && aiData.fecha_hora_viaje !== '-') ? aiData.fecha_hora_viaje : shiftDateFallback;
 
-              await db.execute(
-                `INSERT INTO entries (
+            await db.execute(
+              `INSERT INTO entries (
                   shift_id, tipo, concepto_especial, pasajero_nombre, distancia, duracion, 
                   fecha_hora_viaje, origen_direccion, destino_direccion, 
                   tipo_vehiculo, metodo_pago, efectivo_recibido, 
@@ -234,16 +234,16 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
                   impuesto, ganancias_desp_imp, ganancia_real,
                   roi_km, calificacion_seleccion, raw_data_json
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                  shiftId, aiData.tipo_documento, aiData.concepto_especial || null,
-                  aiData.pasajero_nombre || (aiData.tipo_documento === 'recompensa' ? 'META CUMPLIDA' : 'App DiDi'),
-                  d, aiData.duracion || '-',
-                  finalDate, aiData.origen_direccion || '-', aiData.destino_direccion || '-',
+              [
+                shiftId, aiData.tipo_documento, aiData.concepto_especial || null,
+                aiData.pasajero_nombre || (aiData.tipo_documento === 'recompensa' ? 'META CUMPLIDA' : 'App DiDi'),
+                d, aiData.duracion || '-',
+                finalDate, aiData.origen_direccion || '-', aiData.destino_direccion || '-',
                 aiData.tipo_vehiculo || '-', aiData.metodo_pago || 'Desconocido', aiData.efectivo_recibido || 0,
-                aiData.pagado_por_el_pasajero || 0, n, aiData.tus_ganancias || n, 
-                0, aiData.otras_deducciones_app || 0, aiData.tarifa_de_servicio || 0, 
-                aiData.cuota_de_solicitud || 0, aiData.tarifa_dinamica || 'No aplica', 
-                aiData.monto_adicional_por_gasolina || 0, aiData.impuesto || 0, n_neto, 
+                aiData.pagado_por_el_pasajero || 0, n, aiData.tus_ganancias || n,
+                0, aiData.otras_deducciones_app || 0, aiData.tarifa_de_servicio || 0,
+                aiData.cuota_de_solicitud || 0, aiData.tarifa_dinamica || 'No aplica',
+                aiData.monto_adicional_por_gasolina || 0, aiData.impuesto || 0, n_neto,
                 profitReal, roi, calificacion, JSON.stringify(aiData)
               ]
             );
