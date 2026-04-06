@@ -30,13 +30,17 @@ async function parseDidiReport(imagePaths) {
         content: `Eres el Auditor Maestro de Didi Audit AI. 
         Tu objetivo es extraer datos de capturas de pantalla de DiDi México con precisión absoluta.
         
-        Debes analizar las imágenes y determinar si se trata de un "VIAJE" de DiDi o una "RECARGA" de gasolina (ticket + odómetro).
+        Debes analizar las imágenes y determinar el tipo de información:
+        - "viaje": Resumen estándar de DiDi México (Origen/Destino).
+        - "gasolina": Ticket de combustible o foto de odómetro.
+        - "recompensa": Bonos, metas de viajes (Ej: "Viaja más, gana más").
+        - "cancelacion": Tarifa de cancelación pagada al conductor.
         
         Devuelve UNICAMENTE un objeto JSON con esta estructura:
         {
-          "tipo_documento": "viaje" | "gasolina" | "desconocido",
+          "tipo_documento": "viaje" | "gasolina" | "recompensa" | "cancelacion" | "desconocido",
           
-          // Si es un VIAJE:
+          // Si es un VIAJE o CANCELACIÓN:
           "pasajero_nombre": "Nombre del pasajero",
           "distancia": 0.0,
           "duracion": "Ej: 14m 24s",
@@ -49,21 +53,27 @@ async function parseDidiReport(imagePaths) {
           "tus_ganancias": 0.0,
           "ganancias_desp_imp": 0.0,
           
+          // Si es una RECOMPENSA (Bono/Meta):
+          "concepto_especial": "Ej: Recompensa por meta de 15 viajes",
+          "monto_recompensa": 0.0,
+          
           // Si es una RECARGA de gasolina:
           "gasolinera": "Nombre de la gasolinera",
           "total_pagado": 0.0,
           "litros": 0.0,
           "precio_litro": 0.0,
+          "fecha": "Formato: DD/MM/YYYY HH:MM:SS",
           "km_odometro_actual": 0,
           
           "is_valid": true
         }
 
         Instrucciones Especiales:
-        - "tipo_documento": Identifica si es un resumen de viaje de DiDi México o un ticket/odómetro de combustible.
-        - "is_valid": Solo false si la imagen no es ninguna de las anteriores.
-        - Sé extremadamente preciso con los montos de "tus_ganancias" o "total_pagado".
-        - Si es gasolina, busca el total pagado, los litros y el precio por litro en el ticket. Del odómetro extrae el kilometraje actual total.
+        - "tipo_documento": Identifica con precisión si es un viaje completado, cancelación pagada, bono de meta o ticket de gasolina.
+        - "recompensa": Si ves "Viaja más, gana más", usa este tipo y extrae el monto total como tus_ganancias y monto_recompensa.
+        - "cancelacion": Si ves "Tar. cancel. dinám.", extrae el monto en tus_ganancias.
+        - "gasolina": BUSCA LA FECHA REAL DEL TICKET (ej: 04/04/2026). Es vital para la auditoría.
+        - "is_valid": Solo false si la imagen no tiene nada que ver con lo anterior.
         `
       },
       {

@@ -183,13 +183,27 @@ const Dashboard = () => {
                 {[1, 2, 5, 10].map(v => (
                   <div key={`m${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#1a1a1a', padding: '5px', borderRadius: '4px' }}>
                     <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold' }}>${v}</div>
-                    <input type="number" value={denoms[`m${v}`]} onChange={e => setDenoms({...denoms, [`m${v}`]: Number(e.target.value)})} style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} placeholder="0" />
+                    <input 
+                      type="number" 
+                      value={denoms[`m${v}`] === 0 ? '' : denoms[`m${v}`]} 
+                      onChange={e => setDenoms({...denoms, [`m${v}`]: Number(e.target.value)})} 
+                      onFocus={e => e.target.select()}
+                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} 
+                      placeholder="0" 
+                    />
                   </div>
                 ))}
                 {[20, 50, 100, 200, 500].map(v => (
                   <div key={`b${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#222', padding: '5px', borderRadius: '4px', border: '1px solid #333' }}>
                     <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold', color: 'var(--success-green)' }}>${v}</div>
-                    <input type="number" value={denoms[`b${v}`]} onChange={e => setDenoms({...denoms, [`b${v}`]: Number(e.target.value)})} style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} placeholder="0" />
+                    <input 
+                      type="number" 
+                      value={denoms[`b${v}`] === 0 ? '' : denoms[`b${v}`]} 
+                      onChange={e => setDenoms({...denoms, [`b${v}`]: Number(e.target.value)})} 
+                      onFocus={e => e.target.select()}
+                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }} 
+                      placeholder="0" 
+                    />
                   </div>
                 ))}
               </div>
