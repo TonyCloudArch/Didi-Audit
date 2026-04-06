@@ -11,6 +11,9 @@ import Settings from './components/Settings';
 
 const App = () => {
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const currentDate = searchParams.get('date');
+  const dateQuery = currentDate ? `?date=${currentDate}` : '';
 
   return (
     <div style={{ backgroundColor: 'var(--bg-black)', minHeight: '100vh', paddingBottom: '80px' }}>
@@ -38,19 +41,19 @@ const App = () => {
         padding: '12px 0 24px 0',
         zIndex: 1000
       }}>
-        <Link to="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
           <LayoutDashboard size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Dashboard</span>
         </Link>
-        <Link to="/history" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/history' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/history${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/history' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
           <History size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Viajes</span>
         </Link>
-        <Link to="/cubo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/cubo' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/cubo${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/cubo' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
           <Fuel size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Cargas</span>
         </Link>
-        <Link to="/settings" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/settings' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/settings${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/settings' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
           <SettingsIcon size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Ajustes</span>
         </Link>

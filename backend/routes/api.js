@@ -226,9 +226,12 @@ router.post('/upload/batch', upload.array('images', 60), async (req, res) => {
                 aiData.pasajero_nombre || (aiData.tipo_documento === 'recompensa' ? 'META CUMPLIDA' : 'App DiDi'),
                 d, aiData.duracion || '-',
                 aiData.fecha_hora_viaje || '-', aiData.origen_direccion || '-', aiData.destino_direccion || '-',
-                aiData.tipo_vehiculo || '-', aiData.metodo_pago || 'Desconocido', 0,
-                aiData.pagado_por_el_pasajero || 0, n, 0,
-                0, 0, 0, 0, 'No aplica', 0, 0, n_neto, profitReal, roi, calificacion, JSON.stringify(aiData)
+                aiData.tipo_vehiculo || '-', aiData.metodo_pago || 'Desconocido', aiData.efectivo_recibido || 0,
+                aiData.pagado_por_el_pasajero || 0, n, aiData.tus_ganancias || n, 
+                0, aiData.otras_deducciones_app || 0, aiData.tarifa_de_servicio || 0, 
+                aiData.cuota_de_solicitud || 0, aiData.tarifa_dinamica || 'No aplica', 
+                aiData.monto_adicional_por_gasolina || 0, aiData.impuesto || 0, n_neto, 
+                profitReal, roi, calificacion, JSON.stringify(aiData)
               ]
             );
             viajesProcesados++;
@@ -470,10 +473,11 @@ router.get('/dashboard', async (req, res) => {
         COALESCE(SUM(CASE WHEN tipo != 'recompensa' THEN ganancias_desp_imp ELSE 0 END), 0) as total_viajes_neto,
         COALESCE(SUM(CASE WHEN tipo != 'recompensa' THEN tus_ganancias ELSE 0 END), 0) as total_viajes_bruto,
         COALESCE(SUM(CASE WHEN tipo = 'recompensa' THEN tus_ganancias ELSE 0 END), 0) as total_recompensas,
-        COALESCE(SUM(tarifa_de_servicio) + SUM(cuota_de_solicitud), 0) as cuota_didi,
+        COALESCE(SUM(tarifa_de_servicio) + SUM(cuota_de_solicitud) + SUM(tarifa_base_total), 0) as cuota_didi,
+        COALESCE(SUM(impuesto), 0) as total_impuestos,
         COALESCE(SUM(distancia), 0) as km_didi,
-        COALESCE(SUM(CASE WHEN LOWER(metodo_pago) LIKE '%efectivo%' AND tipo != 'recompensa' THEN tus_ganancias ELSE 0 END), 0) as ingresoEfectivo,
-        COALESCE(SUM(CASE WHEN tipo != 'recompensa' THEN ganancias_desp_imp ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN LOWER(metodo_pago) LIKE '%efectivo%' THEN tus_ganancias ELSE 0 END), 0) as ingresoTarjeta
+        COALESCE(SUM(CASE WHEN LOWER(metodo_pago) LIKE '%efectivo%' AND tipo != 'recompensa' THEN ganancias_desp_imp ELSE 0 END), 0) as ingresoEfectivo,
+        COALESCE(SUM(CASE WHEN LOWER(metodo_pago) NOT LIKE '%efectivo%' AND tipo != 'recompensa' THEN ganancias_desp_imp ELSE 0 END), 0) as ingresoTarjeta
       FROM entries WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(CONVERT_TZ(created_at, '+00:00', '-07:00'))) = ?
     `, [targetDate]);
     const didi = didiRows[0];
@@ -513,7 +517,7 @@ router.get('/dashboard', async (req, res) => {
       success: true,
       currentDisposition: totalIngresosEnMano,
       ingresoBruto: totalOperativo,
-      impuestos: totalOperativo - totalIngresosEnMano - Number(didi.cuota_didi),
+      impuestos: Number(didi.total_impuestos || 0),
       cuotaDidi: Number(didi.cuota_didi || 0),
       incentivos: totalRecompensas,
       utilidadReal: utilidadReal,
@@ -523,7 +527,7 @@ router.get('/dashboard', async (req, res) => {
       km_muertos: kmMuertos,
       km_didi: Number(didi.km_didi),
       km_privado: Number(priv.km_privado),
-      ingresoEfectivo: Number(didi.ingresoEfectivo),
+      ingresoEfectivo: Number(didi.ingresoEfectivo) + Number(priv.total),
       ingresoTarjeta: Number(didi.ingresoTarjeta),
       shift_initial_odometer: shift ? Number(shift.initial_odometer) : null,
       shift_status: shift?.status || null

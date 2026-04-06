@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, Fuel, CreditCard } from 'lucide-react';
 
 const HistoryView = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
+
   const [entries, setEntries] = useState([]);
-  const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
-  const [period, setPeriod] = useState('day');
+  const [date, setDate] = useState(initialDate);
+  const [period, setPeriod] = useState(searchParams.get('date') ? '' : 'day');
   const [loading, setLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState([]);
   const [privateMode, setPrivateMode] = useState(false);
@@ -121,8 +125,9 @@ const HistoryView = () => {
           type="date"
           value={date}
           onChange={(e) => {
-            setDate(e.target.value);
-            setPeriod('');
+            const newDate = e.target.value;
+            setDate(newDate);
+            setSearchParams({ date: newDate });
           }}
           style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
         />
@@ -247,7 +252,7 @@ const HistoryView = () => {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Comisión DiDi Estimada</span>
-                        <span style={{ color: 'var(--error-red)' }}>-${(parseFloat(entry.tarifa_de_servicio) + parseFloat(entry.cuota_de_solicitud)).toFixed(2)}</span>
+                        <span style={{ color: 'var(--error-red)' }}>-${Math.abs(parseFloat(entry.tarifa_de_servicio || 0) + parseFloat(entry.cuota_de_solicitud || 0) + parseFloat(entry.tarifa_base_total || 0)).toFixed(2)}</span>
                       </div>
                       {entry.tarifa_dinamica !== 'No aplica' && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
@@ -260,8 +265,8 @@ const HistoryView = () => {
                         <span style={{ color: 'var(--success-green)' }}>+${parseFloat(entry.monto_adicional_por_gasolina).toFixed(2)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{entry.impuesto_tipo || 'Impuesto'}</span>
-                        <span style={{ color: 'var(--error-red)' }}>-${parseFloat(entry.impuesto).toFixed(2)}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{entry.impuesto_tipo || 'Impuesto (IVA/Local)'}</span>
+                        <span style={{ color: 'var(--error-red)' }}>-${Math.abs(parseFloat(entry.impuesto || 0)).toFixed(2)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #333', paddingTop: '10px', marginTop: '5px', fontWeight: 'bold' }}>
                         <span>Utilidad Neta (Fin)</span>
@@ -295,7 +300,7 @@ const HistoryView = () => {
                       </div>
                       <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right' }}>
                         <CreditCard size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                        {entry.metodo_pago} {entry.metodo_pago === 'En efectivo' ? `($${parseFloat(entry.efectivo_received || entry.efectivo_recibido).toFixed(2)})` : ''}
+                        {entry.metodo_pago} {entry.metodo_pago.toLowerCase().includes('efectivo') ? `($${parseFloat(entry.efectivo_recibido || entry.pagado_por_el_pasajero || 0).toFixed(2)})` : ''}
                       </div>
                     </div>
                   </div>

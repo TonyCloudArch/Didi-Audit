@@ -51,9 +51,15 @@ async function parseDidiReport(imagePaths) {
               "destino_direccion": "Dirección completa punto naranja",
               "tipo_vehiculo": "Ej: Express",
               "metodo_pago": "Efectivo/Tarjeta",
-              "pagado_por_el_pasajero": 0.0,
-              "tus_ganancias": 0.0,
-              "ganancias_desp_imp": 0.0,
+              "efectivo_recibido": 0.0, // Monto literal bajo "Efectivo recibido"
+              "pagado_por_el_pasajero": 0.0, // El total que pagó el usuario
+              "tarifa_de_servicio": 0.0, // El monto negativo bajo "Tarifa de servicio"
+              "cuota_de_solicitud": 0.0, // El monto negativo bajo "Cuota de solicitud"
+              "monto_adicional_por_gasolina": 0.0, // El monto bajo "Monto adicional por gasolina"
+              "tus_ganancias": 0.0, // Es el monto de "Ganancias antes imp." o "Tus ganancias"
+              "otras_deducciones_app": 0.0, // Montos negativos como "Tarifa previa pendiente", "Otras tarifas", etc.
+              "impuesto": 0.0, // El monto bajo "Impuesto" o "Impuesto al Valor Agregado" (negativo)
+              "ganancias_desp_imp": 0.0, // Es el monto de "Ganancias desp. imp."
               
               // Si es una RECOMPENSA (Bono/Meta):
               "concepto_especial": "Ej: Recompensa por meta de 15 viajes",
@@ -63,6 +69,13 @@ async function parseDidiReport(imagePaths) {
             }
           ]
         }
+
+        Instrucciones Especiales:
+        - "tarifa_de_servicio" y "cuota_de_solicitud": Estos suelen ser números negativos (ej: -9.34). Extráelos con su signo si es posible.
+        - "impuesto": Extrae el monto negativo de IVA o impuestos locales.
+        - "efectivo_recibido": Es vital si el método es "En efectivo".
+        - "monto_adicional_por_gasolina": Solo si aparece explícitamente en el desglose.
+
 
         Instrucciones Especiales:
         - Si detectas que las imágenes corresponden a DOS documentos distintos (ej: una recompensa y un viaje, o dos bonos distintos), crea dos objetos en el array "documentos".

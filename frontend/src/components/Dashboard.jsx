@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
 
 const Dashboard = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
+  
   const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(new Date().toLocaleDateString('sv'));
+  const [date, setDate] = useState(initialDate);
   const [activeShift, setActiveShift] = useState(null);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [shiftInputs, setShiftInputs] = useState({ odometer: '', cash: '' });
@@ -109,15 +112,21 @@ const Dashboard = () => {
                 ? '🔵 DÍA DESCANSADO'
                 : isFuture
                   ? '📅 FECHA FUTURA / INACTIVO'
-                  : isPast 
-                    ? '🔴 HISTÓRICO / CERRADO' 
-                    : (activeShift ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})` : '🟡 ESPERANDO INICIO DE TURNO')}
+                  : (activeShift && activeShift.status === 'OPEN') 
+                    ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})`
+                    : isPast 
+                      ? '🔴 HISTÓRICO / CERRADO' 
+                      : '🟡 ESPERANDO INICIO DE TURNO'}
             </p>
           </div>
           <input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => {
+              const newDate = e.target.value;
+              setDate(newDate);
+              setSearchParams({ date: newDate });
+            }}
             style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
           />
         </div>
@@ -128,9 +137,9 @@ const Dashboard = () => {
         padding: '12px', 
         borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : (isFuture ? '4px solid #222' : '4px solid #444')), 
         background: isRestDay ? 'rgba(52,152,219,0.05)' : (activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)'),
-        opacity: (isFuture || (isPast && !isRestDay)) ? 0.4 : 1,
-        filter: (isFuture || (isPast && !isRestDay)) ? 'grayscale(1)' : 'none',
-        pointerEvents: (isFuture || (isPast && !isRestDay)) ? 'none' : 'auto'
+        opacity: (isFuture || (isPast && !activeShift)) ? 0.4 : 1,
+        filter: (isFuture || (isPast && !activeShift)) ? 'grayscale(1)' : 'none',
+        pointerEvents: (isFuture || (isPast && !activeShift)) ? 'none' : 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -145,15 +154,15 @@ const Dashboard = () => {
               fontSize: '11px', 
               padding: '8px 16px', 
               borderRadius: '20px',
-              backgroundColor: (isRestDay || isFuture) ? '#1a1a1a' : (isPast ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)')),
-              color: (isRestDay || isFuture) ? '#555' : (isPast ? '#777' : (activeShift ? '#fff' : '#000')),
+              backgroundColor: (isRestDay || isFuture) ? '#1a1a1a' : (isPast && !activeShift ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)')),
+              color: (isRestDay || isFuture) ? '#555' : (isPast && !activeShift ? '#777' : (activeShift ? '#fff' : '#000')),
               fontWeight: 'bold',
               border: (isRestDay || isFuture) ? '1px dashed #444' : 'none',
-              cursor: (isRestDay || isFuture || isPast) ? 'not-allowed' : 'pointer'
+              cursor: (isRestDay || isFuture || (isPast && !activeShift)) ? 'not-allowed' : 'pointer'
             }}
-            disabled={isRestDay || isFuture || isPast}
+            disabled={isRestDay || isFuture || (isPast && !activeShift)}
           >
-            {isRestDay ? 'Descansando 💤' : isFuture ? 'Próximamente' : (isPast ? '✔️ Terminado' : (activeShift ? '🚩 Finalizar' : '🚀 Iniciar'))}
+            {isRestDay ? 'Descansando 💤' : isFuture ? 'Próximamente' : (isPast && !activeShift ? '✔️ Terminado' : (activeShift ? `🚩 Finalizar ${new Date(activeShift.start_time).toLocaleDateString('sv') === date ? '' : '(Turno Pendiente)'}` : '🚀 Iniciar'))}
           </button>
         </div>
       </div>
@@ -320,17 +329,17 @@ const Dashboard = () => {
         {/* ROW 3: Evasiones y Costos Adheridos (Las "Mordidas" operativas) */}
         <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TAJADA DE LA APP (DIDI)</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi).toFixed(2)}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi || 0).toFixed(2)}</div>
         </div>
         <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>IMPUESTOS DICTADOS</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${impuestos.toFixed(2)}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(impuestos || 0).toFixed(2)}</div>
         </div>
 
         {/* ROW 4: Costo logístico profundo vs El Gran Sobreviviente */}
         <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>IMPACTO DE GASOLINA</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(gastoGasolina || 0).toFixed(2)}</div>
         </div>
         <div className="card" style={{ padding: '10px' }}>
           <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>UTILIDAD REAL LIBRE</div>
@@ -360,9 +369,7 @@ const Dashboard = () => {
 
 
       {/* Backfill controls */}
-      { !isRestDay && !isFuture && (
-        (isToday && activeShift)
-      ) && (
+      { !isRestDay && !isFuture && activeShift && (
         <div style={{ marginTop: '10px' }}>
           <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ flexDirection: 'column', height: '110px', fontSize: '15px', width: '100%', gap: '10px' }}>
             <Camera size={38} />
