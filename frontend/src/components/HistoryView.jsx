@@ -172,6 +172,8 @@ const HistoryView = () => {
           <div className="card" style={{ textAlign: 'center' }}>No hay viajes registrados en este periodo.</div>
         ) : (
           entries.map((entry) => {
+            const isRecompensa = entry.tipo === 'recompensa';
+            const isCancelacion = entry.tipo === 'cancelacion';
             const isPrivate = entry.tipo === 'privado';
             const isGolden = !isPrivate && entry.calificacion_seleccion === 'Boleto Dorado';
             const isSuperElite = !isPrivate && entry.calificacion_seleccion === 'Súper Élite';
@@ -179,7 +181,7 @@ const HistoryView = () => {
             const isFatal = !isPrivate && entry.calificacion_seleccion === 'Fatal';
             const isExpanded = expandedIds.includes(entry.id + (entry.tipo || ''));
 
-            const statusColor = isPrivate ? '#3498db' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)'))));
+            const statusColor = isPrivate ? '#3498db' : (isRecompensa ? 'var(--success-green)' : (isCancelacion ? 'var(--didi-orange)' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)'))))));
 
             return (
               <div key={entry.id + (entry.tipo || '')} onClick={() => toggleExpand(entry.id + (entry.tipo || ''))} className="card" style={{
@@ -195,14 +197,14 @@ const HistoryView = () => {
                     </div>
                   </div>
                   <div style={{ width: '20%', textAlign: 'center' }}>
-                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>DURACION</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                      {entry.duracion ? entry.duracion.replace('32s', 'm').replace(' ', '') : '--'}
+                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>{isRecompensa ? 'TIPO' : 'DURACION'}</div>
+                    <div style={{ fontSize: '14px', color: isRecompensa ? 'var(--success-green)' : 'var(--text-muted)' }}>
+                      {isRecompensa ? 'BONO' : (entry.duracion ? entry.duracion.replace('32s', 'm').replace(' ', '') : '--')}
                     </div>
                   </div>
                   <div style={{ width: '20%', textAlign: 'center' }}>
-                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>DISTANCIA</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>{isCancelacion ? 'CANC.' : 'DISTANCIA'}</div>
+                    <div style={{ fontSize: '14px', color: isCancelacion ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
                       {entry.distancia}
                     </div>
                   </div>

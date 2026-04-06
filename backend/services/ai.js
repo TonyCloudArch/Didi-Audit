@@ -38,37 +38,35 @@ async function parseDidiReport(imagePaths) {
         
         Devuelve UNICAMENTE un objeto JSON con esta estructura:
         {
-          "tipo_documento": "viaje" | "gasolina" | "recompensa" | "cancelacion" | "desconocido",
-          
-          // Si es un VIAJE o CANCELACIÓN:
-          "pasajero_nombre": "Nombre del pasajero",
-          "distancia": 0.0,
-          "duracion": "Ej: 14m 24s",
-          "fecha_hora_viaje": "Ej: 31/03/2026, 11:33:18 am",
-          "origen_direccion": "Dirección completa punto verde",
-          "destino_direccion": "Dirección completa punto naranja",
-          "tipo_vehiculo": "Ej: Express",
-          "metodo_pago": "Efectivo/Tarjeta",
-          "pagado_por_el_pasajero": 0.0,
-          "tus_ganancias": 0.0,
-          "ganancias_desp_imp": 0.0,
-          
-          // Si es una RECOMPENSA (Bono/Meta):
-          "concepto_especial": "Ej: Recompensa por meta de 15 viajes",
-          "monto_recompensa": 0.0,
-          
-          // Si es una RECARGA de gasolina:
-          "gasolinera": "Nombre de la gasolinera",
-          "total_pagado": 0.0,
-          "litros": 0.0,
-          "precio_litro": 0.0,
-          "fecha": "Formato: DD/MM/YYYY HH:MM:SS",
-          "km_odometro_actual": 0,
-          
-          "is_valid": true
+          "documentos": [
+            {
+              "tipo_documento": "viaje" | "gasolina" | "recompensa" | "cancelacion" | "desconocido",
+              
+              // Si es un VIAJE o CANCELACIÓN:
+              "pasajero_nombre": "Nombre del pasajero",
+              "distancia": 0.0,
+              "duracion": "Ej: 14m 24s",
+              "fecha_hora_viaje": "Ej: 31/03/2026, 11:33:18 am",
+              "origen_direccion": "Dirección completa punto verde",
+              "destino_direccion": "Dirección completa punto naranja",
+              "tipo_vehiculo": "Ej: Express",
+              "metodo_pago": "Efectivo/Tarjeta",
+              "pagado_por_el_pasajero": 0.0,
+              "tus_ganancias": 0.0,
+              "ganancias_desp_imp": 0.0,
+              
+              // Si es una RECOMPENSA (Bono/Meta):
+              "concepto_especial": "Ej: Recompensa por meta de 15 viajes",
+              "monto_recompensa": 0.0,
+              
+              "is_valid": true
+            }
+          ]
         }
 
         Instrucciones Especiales:
+        - Si detectas que las imágenes corresponden a DOS documentos distintos (ej: una recompensa y un viaje, o dos bonos distintos), crea dos objetos en el array "documentos".
+        - Si ambas imágenes son del mismo viaje (detalle ganancias + mapa), crea UN solo objeto con los datos consolidados.
         - "tipo_documento": Identifica con precisión si es un viaje completado, cancelación pagada, bono de meta o ticket de gasolina.
         - "recompensa": Si ves "Viaja más, gana más", usa este tipo y extrae el monto total como tus_ganancias y monto_recompensa.
         - "cancelacion": Si ves "Tar. cancel. dinám.", extrae el monto en tus_ganancias.
