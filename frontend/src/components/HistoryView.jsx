@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertCircle, Fuel, CreditCard, Camera, Info } from 'lucide-react';
+import { AlertCircle, Fuel, CreditCard, Camera, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const HistoryView = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
+  const dateInputRef = useRef(null);
 
   const [entries, setEntries] = useState([]);
   const [date, setDate] = useState(initialDate);
@@ -18,6 +19,19 @@ const HistoryView = () => {
   const [privEntry, setPrivEntry] = useState({ pago: '', distancia: '', descripcion: '' });
 
   const [sortBy, setSortBy] = useState('time'); // time, roi, distance, profit
+
+  const changeDate = (offset) => {
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() + offset);
+    const newDate = d.toISOString().split('T')[0];
+    setDate(newDate);
+    setSearchParams({ date: newDate });
+  };
+
+  const formatDateLabel = (dtString) => {
+    const d = new Date(dtString + 'T12:00:00');
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase();
+  };
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -118,40 +132,57 @@ const HistoryView = () => {
 
   return (
     <div className="mobile-container">
-      <div className="header" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px',
-        position: 'relative' // Para centrar el absoluto
-      }}>
-        <h1 style={{ margin: 0 }}>VIAJES</h1>
+      <div className="header" style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', alignItems: 'center', padding: '15px', borderBottom: '1px solid #222', gap: '5px' }}>
+        <div style={{
+          fontSize: '13px',
+          width: '150px',
+          height: '42px',
+          borderRadius: '21px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#111',
+          color: '#888',
+          fontWeight: '900',
+          border: '1px solid #333',
+          letterSpacing: '0.5px'
+        }}>
+          VIAJES
+        </div>
 
-        {entries.length > 0 && (
-          <div style={{
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: '24px',
-            fontWeight: 900,
-            color: avgEfficiencyAll >= 20 ? '#FFD700' : (avgEfficiencyAll >= 12 ? '#00e5ff' : (avgEfficiencyAll >= 8 ? 'var(--success-green)' : (avgEfficiencyAll >= 6 ? 'var(--didi-orange)' : 'var(--error-red)'))),
-            textShadow: avgEfficiencyAll >= 20 ? '0 0 15px rgba(255,215,0,0.5)' : 'none'
-          }}>
-            {avgEfficiencyAll >= 20 && <span style={{ marginRight: '6px' }}>🎫</span>}
-            ${avgEfficiencyAll.toFixed(2)}
+        <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ color: 'white', fontSize: '38px', fontWeight: '900', lineHeight: 1 }}>${avgEfficiencyAll.toFixed(2)}</div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', backgroundColor: '#1a1a1a', padding: '1px', height: '42px', borderRadius: '21px', border: '1px solid #333', width: '150px' }}>
+          <button onClick={() => changeDate(-1)} style={{ background: 'none', border: 'none', color: '#888', height: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronLeft size={20} />
+          </button>
+          
+          <div 
+            onClick={() => dateInputRef.current && dateInputRef.current.showPicker()}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 3, justifyContent: 'center', cursor: 'pointer' }}
+          >
+            <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+              {formatDateLabel(date).replace('-', ' ')}
+            </span>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={date}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                setDate(newDate);
+                setSearchParams({ date: newDate });
+              }}
+              style={{ position: 'absolute', top: 0, left: 0, width: '0', height: '0', opacity: 0, pointerEvents: 'none' }}
+            />
           </div>
-        )}
 
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            const newDate = e.target.value;
-            setDate(newDate);
-            setSearchParams({ date: newDate });
-          }}
-          style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
-        />
+          <button onClick={() => changeDate(1)} style={{ background: 'none', border: 'none', color: '#888', height: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronRight size={20} />
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '10px', opacity: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? 0.3 : 1, pointerEvents: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? 'none' : 'auto' }}>
