@@ -523,7 +523,16 @@ router.get('/history', async (req, res) => {
       return new Date(dateB) - new Date(dateA);
     });
 
-    res.json({ success: true, entries: allEntries });
+    // Obtener estado del turno para candado de edición
+    let shiftStatus = null;
+    if (date) {
+      const [sRows] = await db.execute("SELECT status, initial_odometer FROM shifts WHERE DATE(CONVERT_TZ(start_time, '+00:00', '-07:00')) = ?", [date]);
+      if (sRows[0]) {
+        shiftStatus = sRows[0].initial_odometer === -1 ? 'REST' : sRows[0].status;
+      }
+    }
+
+    res.json({ success: true, entries: allEntries, shiftStatus });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

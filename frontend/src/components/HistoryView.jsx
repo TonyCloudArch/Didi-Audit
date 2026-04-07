@@ -10,6 +10,7 @@ const HistoryView = () => {
   const [date, setDate] = useState(initialDate);
   const [period, setPeriod] = useState(searchParams.get('date') ? '' : 'day');
   const [loading, setLoading] = useState(false);
+  const [shiftStatus, setShiftStatus] = useState(null);
   const [expandedIds, setExpandedIds] = useState([]);
   const [privateMode, setPrivateMode] = useState(false);
   const [showPersonalModal, setShowPersonalModal] = useState(false);
@@ -51,6 +52,7 @@ const HistoryView = () => {
         });
 
         setEntries(allEntries);
+        setShiftStatus(data.shiftStatus);
       }
     } catch (e) {
       console.error(e);
@@ -152,29 +154,97 @@ const HistoryView = () => {
         />
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
-        <button onClick={() => setSortBy('time')} className={`btn ${sortBy === 'time' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px 12px', fontSize: '10px', width: 'auto', flexShrink: 0 }}>ORDENAR</button>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '10px', opacity: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? 0.3 : 1, pointerEvents: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? 'none' : 'auto' }}>
+        <button 
+          onClick={() => setSortBy('time')} 
+          className="btn" 
+          style={{ 
+            padding: '8px 12px', 
+            fontSize: '10px', 
+            width: 'auto', 
+            flexShrink: 0,
+            backgroundColor: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#222' : (sortBy === 'time' ? 'var(--didi-orange)' : '#1a1a1a'),
+            color: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#555' : (sortBy === 'time' ? 'white' : '#888'),
+            border: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '1px solid #333' : 'none'
+          }}
+        >
+          ORDENAR
+        </button>
         <div style={{ width: '1px', backgroundColor: '#333', height: '30px', flexShrink: 0 }}></div>
-        <button onClick={() => setSortBy('roi')} className={`btn ${sortBy === 'roi' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px 12px', fontSize: '10px', width: 'auto', flexShrink: 0 }}>EFICIENCIA</button>
-        <button onClick={() => setSortBy('profit')} className={`btn ${sortBy === 'profit' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px 12px', fontSize: '10px', width: 'auto', flexShrink: 0 }}>GANANCIA</button>
-        <button onClick={() => setSortBy('distance')} className={`btn ${sortBy === 'distance' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px 12px', fontSize: '10px', width: 'auto', flexShrink: 0 }}>DISTANCIA</button>
-        <button onClick={() => setSortBy('duration')} className={`btn ${sortBy === 'duration' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px 12px', fontSize: '10px', width: 'auto', flexShrink: 0 }}>DURACION</button>
+        {['roi', 'profit', 'distance', 'duration'].map(key => (
+          <button 
+            key={key}
+            onClick={() => setSortBy(key)} 
+            className="btn" 
+            style={{ 
+              padding: '8px 12px', 
+              fontSize: '10px', 
+              width: 'auto', 
+              flexShrink: 0,
+              backgroundColor: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#1a1a1a' : (sortBy === key ? 'rgba(255,100,0,0.1)' : '#1a1a1a'),
+              color: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#444' : (sortBy === key ? 'var(--didi-orange)' : '#888'),
+              border: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '1px dashed #333' : (sortBy === key ? '1px solid var(--didi-orange)' : '1px solid #333')
+            }}
+          >
+            {key === 'roi' ? 'EFICIENCIA' : key === 'profit' ? 'GANANCIA' : key === 'distance' ? 'DISTANCIA' : 'DURACION'}
+          </button>
+        ))}
       </div>
 
       <div style={{ marginBottom: '15px' }}>
-        <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', height: '50px', fontSize: '14px', marginBottom: '10px' }}>
+        <Link 
+          to={`/audit?date=${date}`} 
+          className="btn" 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '8px', 
+            height: '50px', 
+            fontSize: '14px', 
+            marginBottom: '10px',
+            backgroundColor: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#1a1a1a' : 'var(--didi-orange)',
+            color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#555' : 'white',
+            border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '1px dashed #333' : 'none',
+            pointerEvents: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 'none' : 'auto',
+            opacity: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 0.6 : 1
+          }}
+        >
           <Camera size={20} />
           Lector Mágico (Auditoría IA)
         </Link>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          <button onClick={() => setPrivateMode(!privateMode)} className="btn btn-secondary" style={{ padding: '8px', fontSize: '11px', border: '1px solid #3498db', color: '#3498db' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', opacity: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 0.6 : 1, pointerEvents: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 'none' : 'auto' }}>
+          <button 
+            onClick={() => setPrivateMode(!privateMode)} 
+            className="btn btn-secondary" 
+            style={{ 
+              padding: '8px', 
+              fontSize: '11px', 
+              border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '1px dashed #333' : '1px solid #3498db', 
+              color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#555' : '#3498db' 
+            }}
+          >
             {privateMode ? '✖️ Cancelar' : '➕ Viaje Privado'}
           </button>
-          <button onClick={() => setShowPersonalModal(true)} className="btn btn-secondary" style={{ padding: '8px', fontSize: '11px', border: '1px solid #9b59b6', color: '#9b59b6' }}>
+          <button 
+            onClick={() => setShowPersonalModal(true)} 
+            className="btn btn-secondary" 
+            style={{ 
+              padding: '8px', 
+              fontSize: '11px', 
+              border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '1px dashed #333' : '1px solid #9b59b6', 
+              color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#555' : '#9b59b6' 
+            }}
+          >
             ➕ Mov. Personal
           </button>
         </div>
+        {(shiftStatus === 'CLOSED' || shiftStatus === 'REST') && (
+          <div style={{ textAlign: 'center', fontSize: '10px', color: '#555', marginTop: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            🔒 Auditoría Finalizada
+          </div>
+        )}
       </div>
 
       {privateMode && (
@@ -203,7 +273,11 @@ const HistoryView = () => {
             <br /><small style={{ fontSize: '10px' }}>Estamos preparando las tarjetas de rentabilidad acumulada.</small>
           </div>
         ) : entries.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center' }}>No hay viajes registrados en este periodo.</div>
+          <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)', border: shiftStatus === 'REST' ? '1px dashed #3498db' : '1px solid #333' }}>
+            {shiftStatus === 'REST' 
+              ? '💤 Día de descanso marcado. No se registraron actividades laborales.' 
+              : 'No hay viajes registrados en este periodo.'}
+          </div>
         ) : (
           entries.map((entry) => {
             const isRecompensa = entry.tipo === 'recompensa';

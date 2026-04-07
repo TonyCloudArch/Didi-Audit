@@ -6,7 +6,7 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
 
-  const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, km_personal: 0 });
+  const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, km_personal: 0, shift_status: null });
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(initialDate);
   const [activeShift, setActiveShift] = useState(null);
@@ -50,7 +50,8 @@ const Dashboard = () => {
             km_didi: Number(d.km_didi || 0),
             km_privado: Number(d.km_privado || 0),
             km_personal: Number(d.km_personal || 0),
-            isRestDay: Number(d.shift_initial_odometer) === -1
+            isRestDay: Number(d.shift_initial_odometer) === -1,
+            shift_status: d.shift_status
           });
           localStorage.setItem('shared_audit_date', date); // 🏁 Sincronizar fecha global
         }
@@ -142,7 +143,7 @@ const Dashboard = () => {
                   ? '📅 FECHA FUTURA / INACTIVO'
                   : (activeShift && activeShift.status === 'OPEN')
                     ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})`
-                    : isPast
+                    : (stats.shift_status === 'CLOSED')
                       ? '🔴 HISTÓRICO / CERRADO'
                       : '🟡 ESPERANDO INICIO DE TURNO'}
             </p>
@@ -163,16 +164,16 @@ const Dashboard = () => {
       {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
       <div className="card" style={{
         padding: '12px',
-        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : (isFuture ? '4px solid #222' : '4px solid #444')),
+        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : (stats.shift_status === 'CLOSED' ? '4px solid #444' : (isFuture ? '4px solid #222' : '4px solid var(--success-green)'))),
         background: isRestDay ? 'rgba(52,152,219,0.05)' : (activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)'),
-        opacity: (isFuture || (isPast && !activeShift)) ? 0.4 : 1,
-        filter: (isFuture || (isPast && !activeShift)) ? 'grayscale(1)' : 'none',
-        pointerEvents: (isFuture || (isPast && !activeShift)) ? 'none' : 'auto'
+        opacity: (isFuture || (isPast && !activeShift && stats.shift_status !== 'CLOSED')) ? 0.4 : 1,
+        filter: (isFuture || (isPast && !activeShift && stats.shift_status !== 'CLOSED')) ? 'grayscale(1)' : 'none',
+        pointerEvents: (isFuture || (isPast && !activeShift && stats.shift_status !== 'CLOSED')) ? 'none' : 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isRestDay ? 'DÍA DE DESCANSO' : (isFuture ? 'SIN ACTIVIDAD' : (isPast ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')))}
+              {isRestDay ? 'DÍA DE DESCANSO' : (isFuture ? 'SIN ACTIVIDAD' : (stats.shift_status === 'CLOSED' ? 'TURNO FINALIZADO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')))}
               {activeShift && activeShift.status === 'OPEN' && (
                 <button 
                   onClick={() => setShowSyncModal(true)}
@@ -190,15 +191,15 @@ const Dashboard = () => {
               fontSize: '11px',
               padding: '8px 16px',
               borderRadius: '20px',
-              backgroundColor: (isRestDay || isFuture) ? '#1a1a1a' : (isPast && !activeShift ? '#222' : (activeShift ? 'var(--error-red)' : 'var(--success-green)')),
-              color: (isRestDay || isFuture) ? '#555' : (isPast && !activeShift ? '#777' : (activeShift ? '#fff' : '#000')),
+              backgroundColor: (isRestDay || isFuture) ? '#1a1a1a' : (stats.shift_status === 'CLOSED' ? '#222' : (activeShift ? 'var(--didi-orange)' : 'var(--success-green)')),
+              color: (isRestDay || isFuture) ? '#555' : (stats.shift_status === 'CLOSED' ? '#777' : (activeShift ? '#fff' : '#000')),
               fontWeight: 'bold',
               border: (isRestDay || isFuture) ? '1px dashed #444' : 'none',
-              cursor: (isRestDay || isFuture || (isPast && !activeShift)) ? 'not-allowed' : 'pointer'
+              cursor: (isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)) ? 'not-allowed' : 'pointer'
             }}
-            disabled={isRestDay || isFuture || (isPast && !activeShift)}
+            disabled={isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)}
           >
-            {isRestDay ? 'Descansando 💤' : isFuture ? 'Próximamente' : (isPast && !activeShift ? '✔️ Terminado' : (activeShift ? `🚩 Finalizar ${new Date(activeShift.start_time).toLocaleDateString('sv') === date ? '' : '(Turno Pendiente)'}` : '🚀 Iniciar'))}
+            {isRestDay ? 'Descansando 💤' : isFuture ? 'Próximamente' : (stats.shift_status === 'CLOSED' && !activeShift ? '✔️ Terminado' : (activeShift ? `🚩 Finalizar ${new Date(activeShift.start_time).toLocaleDateString('sv') === date ? '' : '(Turno Pendiente)'}` : '🚀 Iniciar'))}
           </button>
         </div>
       </div>
@@ -412,7 +413,7 @@ const Dashboard = () => {
 
 
       {/* Rest day control */}
-      {!isRestDay && !isFuture && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || isPast)) && (
+      {!isRestDay && !isFuture && stats.shift_status !== 'CLOSED' && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || isPast)) && (
         <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
           💤 Marcar como Día Descansado
         </button>
