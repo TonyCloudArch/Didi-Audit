@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, Fuel, CreditCard } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { AlertCircle, Fuel, CreditCard, Camera, Info } from 'lucide-react';
 
 const HistoryView = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,6 +12,8 @@ const HistoryView = () => {
   const [loading, setLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState([]);
   const [privateMode, setPrivateMode] = useState(false);
+  const [showPersonalModal, setShowPersonalModal] = useState(false);
+  const [personalInputs, setPersonalInputs] = useState({ km: '', desc: '' });
   const [privEntry, setPrivEntry] = useState({ pago: '', distancia: '', descripcion: '' });
 
   const [sortBy, setSortBy] = useState('time'); // time, roi, distance, profit
@@ -58,6 +60,9 @@ const HistoryView = () => {
 
   useEffect(() => {
     fetchHistory();
+    if (date) {
+      localStorage.setItem('shared_audit_date', date); // 🏁 Sincronizar de vuelta al Dashboard
+    }
     if (date === new Date().toLocaleDateString('sv')) {
       setPeriod('day');
     } else if (date) {
@@ -91,7 +96,21 @@ const HistoryView = () => {
     }
   };
 
-  const totalIncomeAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'privado' ? curr.pago : curr.ganancias_desp_imp), 0);
+  const handleRegisterPersonal = async () => {
+    if (!personalInputs.km || !personalInputs.desc) return;
+    const res = await fetch('http://localhost:3001/api/personal_movements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, distancia: Number(personalInputs.km), descripcion: personalInputs.desc })
+    });
+    if (res.ok) {
+      setShowPersonalModal(false);
+      setPersonalInputs({ km: '', desc: '' });
+      fetchHistory();
+    }
+  };
+
+  const totalIncomeAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'privado' ? curr.pago : (curr.tipo === 'personal' ? 0 : curr.ganancias_desp_imp)), 0);
   const totalKmAll = entries.reduce((acc, curr) => acc + parseFloat(curr.distancia), 0);
   const avgEfficiencyAll = totalKmAll > 0 ? (totalIncomeAll / totalKmAll) : 0;
 
@@ -142,10 +161,20 @@ const HistoryView = () => {
         <button onClick={() => setSortBy('duration')} className={`btn ${sortBy === 'duration' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '8px 12px', fontSize: '10px', width: 'auto', flexShrink: 0 }}>DURACION</button>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-        <button onClick={() => setPrivateMode(!privateMode)} className="btn btn-secondary" style={{ padding: '8px', fontSize: '12px', border: '1px solid var(--didi-orange)', color: 'var(--didi-orange)' }}>
-          {privateMode ? '✖️ Cancelar' : '➕ Viaje Privado'}
-        </button>
+      <div style={{ marginBottom: '15px' }}>
+        <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', height: '50px', fontSize: '14px', marginBottom: '10px' }}>
+          <Camera size={20} />
+          Lector Mágico (Auditoría IA)
+        </Link>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <button onClick={() => setPrivateMode(!privateMode)} className="btn btn-secondary" style={{ padding: '8px', fontSize: '11px', border: '1px solid #3498db', color: '#3498db' }}>
+            {privateMode ? '✖️ Cancelar' : '➕ Viaje Privado'}
+          </button>
+          <button onClick={() => setShowPersonalModal(true)} className="btn btn-secondary" style={{ padding: '8px', fontSize: '11px', border: '1px solid #9b59b6', color: '#9b59b6' }}>
+            ➕ Mov. Personal
+          </button>
+        </div>
       </div>
 
       {privateMode && (
@@ -180,13 +209,14 @@ const HistoryView = () => {
             const isRecompensa = entry.tipo === 'recompensa';
             const isCancelacion = entry.tipo === 'cancelacion';
             const isPrivate = entry.tipo === 'privado';
-            const isGolden = !isPrivate && entry.calificacion_seleccion === 'Boleto Dorado';
-            const isSuperElite = !isPrivate && entry.calificacion_seleccion === 'Súper Élite';
-            const isPobre = !isPrivate && entry.calificacion_seleccion === 'Pobre';
-            const isFatal = !isPrivate && entry.calificacion_seleccion === 'Fatal';
+            const isPersonal = entry.tipo === 'personal';
+            const isGolden = !isPrivate && !isPersonal && entry.calificacion_seleccion === 'Boleto Dorado';
+            const isSuperElite = !isPrivate && !isPersonal && entry.calificacion_seleccion === 'Súper Élite';
+            const isPobre = !isPrivate && !isPersonal && entry.calificacion_seleccion === 'Pobre';
+            const isFatal = !isPrivate && !isPersonal && entry.calificacion_seleccion === 'Fatal';
             const isExpanded = expandedIds.includes(entry.id + (entry.tipo || ''));
 
-            const statusColor = isPrivate ? '#3498db' : (isRecompensa ? 'var(--success-green)' : (isCancelacion ? 'var(--didi-orange)' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)'))))));
+            const statusColor = isPersonal ? '#9b59b6' : (isPrivate ? '#3498db' : (isRecompensa ? 'var(--success-green)' : (isCancelacion ? 'var(--didi-orange)' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)')))))));
 
             return (
               <div key={entry.id + (entry.tipo || '')} onClick={() => toggleExpand(entry.id + (entry.tipo || ''))} className="card" style={{
@@ -197,14 +227,14 @@ const HistoryView = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1px' }}>
                   <div style={{ width: '20%', textAlign: 'left' }}>
                     <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>PAGO</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 'normal' }}>
-                      ${parseFloat(isPrivate ? entry.pago : entry.ganancias_desp_imp).toFixed(2)}
+                    <div style={{ fontSize: '14px', color: isPersonal ? '#444' : 'var(--text-muted)', fontWeight: 'normal' }}>
+                      {isPersonal ? '$0.00' : `$${parseFloat(isPrivate ? entry.pago : entry.ganancias_desp_imp).toFixed(2)}`}
                     </div>
                   </div>
                   <div style={{ width: '20%', textAlign: 'center' }}>
-                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>{isRecompensa ? 'TIPO' : 'DURACION'}</div>
-                    <div style={{ fontSize: '14px', color: isRecompensa ? 'var(--success-green)' : 'var(--text-muted)' }}>
-                      {isRecompensa ? 'BONO' : (entry.duracion ? entry.duracion.replace('32s', 'm').replace(' ', '') : '--')}
+                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>{isPersonal ? 'TIPO' : (isRecompensa ? 'TIPO' : 'DURACION')}</div>
+                    <div style={{ fontSize: '14px', color: (isRecompensa || isPersonal) ? statusColor : 'var(--text-muted)' }}>
+                      {isPersonal ? 'PERSONAL' : (isRecompensa ? 'BONO' : (entry.duracion ? entry.duracion.replace('32s', 'm').replace(' ', '') : '--'))}
                     </div>
                   </div>
                   <div style={{ width: '20%', textAlign: 'center' }}>
@@ -213,30 +243,27 @@ const HistoryView = () => {
                       {entry.distancia}
                     </div>
                   </div>
-                  {!isPrivate && (
-                    <div style={{ width: '20%', textAlign: 'center' }}>
-                      <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>EFICIENCIA</div>
-                      <div style={{ fontSize: '14px', color: statusColor, fontWeight: 'normal' }}>
-                        ${parseFloat(entry.roi_km).toFixed(1)}
-                      </div>
+                  <div style={{ width: '20%', textAlign: 'center' }}>
+                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>EFICIENCIA</div>
+                    <div style={{ fontSize: '14px', color: isPersonal ? '#444' : statusColor, fontWeight: 'normal' }}>
+                      {isPersonal ? '--' : `$${parseFloat(entry.roi_km || 0).toFixed(1)}`}
                     </div>
-                  )}
+                  </div>
                   <div style={{ width: '20%', textAlign: 'right' }}>
-                    <div style={{ fontSize: '7.5px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>GANANCIA</div>
-                    <div style={{ fontSize: '14px', color: 'white', fontWeight: 'bold' }}>
-                      ${Math.round(isPrivate ? entry.pago : entry.ganancia_real)}
+                    <div style={{ fontSize: '14px', color: isPersonal ? '#444' : 'white', fontWeight: 'bold' }}>
+                      {isPersonal ? '--' : `$${Math.round(entry.ganancia_real || (isPrivate ? entry.pago : 0))}`}
                     </div>
                   </div>
                 </div>
 
-                {isExpanded && isPrivate && (
+                {isExpanded && (isPrivate || isPersonal) && (
                   <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px' }}>
-                    <div style={{ fontSize: '12px', color: '#eee' }}>{entry.descripcion}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>Registrado el {new Date(entry.fecha).toLocaleDateString()}</div>
+                    <div style={{ fontSize: '14px', color: isPersonal ? '#9b59b6' : '#eee', fontWeight: 'bold' }}>{entry.descripcion}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>Registrado el {new Date(isPersonal ? entry.fecha : entry.fecha).toLocaleDateString()}</div>
                   </div>
                 )}
 
-                {isExpanded && !isPrivate && (
+                {isExpanded && !isPrivate && !isPersonal && (
                   <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <AlertCircle size={16} color="var(--didi-orange)" />
@@ -309,6 +336,43 @@ const HistoryView = () => {
             );
           })
         )
+      )}
+
+      {/* 🏠 Modal Movimiento Personal */}
+      {showPersonalModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <h3 style={{ fontSize: '14px', textAlign: 'center', color: '#9b59b6' }}>REGISTRAR MOVIMIENTO PERSONAL</h3>
+            <p style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>Estos KM se restarán del negocio para proteger tu IQ.</p>
+            
+            <div>
+              <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px' }}>DISTANCIA RECORRIDA (KM)</div>
+              <input 
+                type="number" 
+                value={personalInputs.km} 
+                onChange={e => setPersonalInputs({ ...personalInputs, km: e.target.value })}
+                placeholder="Ej: 14"
+                style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px' }}>CONCEPTO (NOMBRE Y APELLIDO)</div>
+              <input 
+                type="text" 
+                value={personalInputs.desc} 
+                onChange={e => setPersonalInputs({ ...personalInputs, desc: e.target.value })}
+                placeholder="Ej: Gym / Inglés Esposa"
+                style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowPersonalModal(false)} style={{ flex: 1 }}>Cerrar</button>
+              <button className="btn" onClick={handleRegisterPersonal} style={{ flex: 1, backgroundColor: '#9b59b6', color: 'white' }}>Guardar Movimiento</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

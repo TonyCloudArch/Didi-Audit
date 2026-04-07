@@ -376,15 +376,32 @@ router.post('/expenses', async (req, res) => {
 });
 
 // 🛑 4. Cerrar Turno (Corte de Caja)
+// Actualizar odómetro actual (mid-shift) para ROI Real en vivo y guardar historial
+router.post('/shifts/sync', async (req, res) => {
+  const { shift_id, current_odometer } = req.body;
+  try {
+    // 1. Snapshot histórico para análisis futuro
+    await db.execute('INSERT INTO odometer_logs (shift_id, odometer) VALUES (?, ?)', [shift_id, current_odometer]);
+    
+    // 2. Estado actual para Dashboard
+    await db.execute('UPDATE shifts SET current_odometer = ? WHERE id = ?', [current_odometer, shift_id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/shifts/close', async (req, res) => {
   const { shift_id, final_odometer, final_cash_counted, denominations } = req.body;
   try {
-    // Calcular totales usando nombres exactos
-    const [entries] = await db.execute('SELECT SUM(ganancias_desp_imp) as total_neto, SUM(distancia) as total_km FROM entries WHERE shift_id = ?', [shift_id]);
+    // Calcular totales usando nombres exactos (Didi + Privado)
+    const [didiEntries] = await db.execute('SELECT SUM(ganancias_desp_imp) as total_neto, SUM(distancia) as total_km FROM entries WHERE shift_id = ?', [shift_id]);
+    const [privEntries] = await db.execute('SELECT SUM(pago) as total_neto, SUM(distancia) as total_km FROM private_trips WHERE shift_id = ?', [shift_id]);
     const [expenses] = await db.execute('SELECT SUM(amount) as total_exp FROM expenses WHERE shift_id = ?', [shift_id]);
     const [shift] = await db.execute('SELECT initial_cash, initial_odometer FROM shifts WHERE id = ?', [shift_id]);
 
-    const totalNeto = Number(entries[0].total_neto || 0);
+    const totalNeto = Number(didiEntries[0].total_neto || 0) + Number(privEntries[0].total_neto || 0);
+    const totalKmProductivos = Number(didiEntries[0].total_km || 0) + Number(privEntries[0].total_km || 0);
     const totalExp = Number(expenses[0].total_exp || 0);
     const expectedCash = shift[0].initial_cash + totalNeto - totalExp;
     const difference = final_cash_counted - expectedCash;
@@ -427,9 +444,39 @@ router.post('/private_trips', async (req, res) => {
     const [shift] = await db.execute("SELECT id FROM shifts WHERE DATE(start_time) = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1", [targetDate]);
     const shiftId = shift[0] ? shift[0].id : null;
 
+    // 🔥 CALCULO DE EFICIENCIA INMEDIATA (Fase 0 Fix)
+    const [fuelRows] = await db.execute('SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY created_at DESC LIMIT 1');
+    const kmCost = fuelRows.length > 0 ? Number(fuelRows[0].costo_real_km) : 2.27;
+    
+    const roi_km = distancia > 0 ? (pago / distancia) : 0;
+    const ganancia_real = pago - (distancia * kmCost);
+
     await db.execute(
-      "INSERT INTO private_trips (shift_id, fecha, pago, distancia, descripcion) VALUES (?, ?, ?, ?, ?)",
-      [shiftId, targetDate, pago, distancia, descripcion || 'Viaje Privado']
+      "INSERT INTO private_trips (shift_id, fecha, pago, distancia, roi_km, ganancia_real, descripcion) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [shiftId, targetDate, pago, distancia, roi_km, ganancia_real, descripcion || 'Viaje Privado']
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 🏠 Registrar Movimiento Personal (No afectable a negocio)
+router.post('/personal_movements', async (req, res) => {
+  const { date, distancia, descripcion } = req.body;
+  const targetDate = date || new Date(new Date().getTime() - 7 * 3600 * 1000).toISOString().split('T')[0];
+
+  if (isFutureDate(targetDate)) {
+    return res.status(400).json({ error: 'No se pueden registrar movimientos en fechas futuras.' });
+  }
+
+  try {
+    const [shift] = await db.execute("SELECT id FROM shifts WHERE DATE(start_time) = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1", [targetDate]);
+    const shiftId = shift[0] ? shift[0].id : null;
+
+    await db.execute(
+      "INSERT INTO personal_movements (shift_id, fecha, distancia, descripcion) VALUES (?, ?, ?, ?)",
+      [shiftId, targetDate, distancia, descripcion || 'Movimiento Personal']
     );
     res.json({ success: true });
   } catch (err) {
@@ -445,7 +492,7 @@ router.get('/history', async (req, res) => {
     let didiParams = [];
 
     if (date) {
-      didiQuery += " WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(created_at)) = ?";
+      didiQuery += " WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y')), DATE(CONVERT_TZ(created_at, '+00:00', '-07:00'))) = ?";
       didiParams.push(date);
     } else if (period === 'week') {
       didiQuery += " WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(created_at)) >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
@@ -462,7 +509,15 @@ router.get('/history', async (req, res) => {
 
     const [privateEntries] = await db.execute(privQuery, privParams);
 
-    const allEntries = [...didiEntries, ...privateEntries].sort((a, b) => {
+    let personalQuery = "SELECT *, 'personal' as tipo FROM personal_movements";
+    let personalParams = [];
+    if (date) {
+      personalQuery += " WHERE fecha = ?";
+      personalParams.push(date);
+    }
+    const [personalEntries] = await db.execute(personalQuery, personalParams);
+
+    const allEntries = [...didiEntries, ...privateEntries, ...personalEntries].sort((a, b) => {
       const dateA = a.tipo === 'didi' ? a.fecha_hora_viaje : a.fecha;
       const dateB = b.tipo === 'didi' ? b.fecha_hora_viaje : b.fecha;
       return new Date(dateB) - new Date(dateA);
@@ -491,23 +546,28 @@ router.get('/dashboard', async (req, res) => {
         COALESCE(SUM(distancia), 0) as km_didi,
         COALESCE(SUM(CASE WHEN LOWER(metodo_pago) LIKE '%efectivo%' AND tipo != 'recompensa' THEN ganancias_desp_imp ELSE 0 END), 0) as ingresoEfectivo,
         COALESCE(SUM(CASE WHEN LOWER(metodo_pago) NOT LIKE '%efectivo%' AND tipo != 'recompensa' THEN ganancias_desp_imp ELSE 0 END), 0) as ingresoTarjeta
-      FROM entries WHERE COALESCE(DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), DATE(CONVERT_TZ(created_at, '+00:00', '-07:00'))) = ?
+      FROM entries 
+      WHERE COALESCE(
+        DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y, %h:%i:%s %p')), 
+        DATE(STR_TO_DATE(fecha_hora_viaje, '%d/%m/%Y')),
+        DATE(CONVERT_TZ(created_at, '+00:00', '-07:00'))
+      ) = ?
     `, [targetDate]);
     const didi = didiRows[0];
 
     const [privRows] = await db.execute(`SELECT COALESCE(SUM(pago), 0) as total, COALESCE(SUM(distancia), 0) as km_privado FROM private_trips WHERE fecha = ?`, [targetDate]);
     const priv = privRows[0];
 
-    // 2.5 Datos Personales
-    const [personalRows] = await db.execute(`SELECT COALESCE(SUM(distancia), 0) as km_personal FROM personal_movements WHERE fecha = ?`, [targetDate]);
-    const kmPersonal = Number(personalRows[0].km_personal || 0);
+    // 2.1 Datos Personales (Conceptos como Gym, Inglés, etc.)
+    const [persRows] = await db.execute(`SELECT COALESCE(SUM(distancia), 0) as km_personal FROM personal_movements WHERE fecha = ?`, [targetDate]);
+    const pers = persRows[0];
 
     // 3. Gasolina (Costo dinámico: Tomamos el último costo válido > 0 para evitar distorsiones)
     const [fuelRows] = await db.execute("SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY id DESC LIMIT 1");
     const fuel = fuelRows[0] || { costo_real_km: 2.27 }; // Fallback si no hay promedios previos
 
     // 4. Turno (Control de odómetro)
-    const [shiftRows] = await db.execute("SELECT initial_odometer, final_odometer, status FROM shifts WHERE DATE(CONVERT_TZ(start_time, '+00:00', '-07:00')) = ?", [targetDate]);
+    const [shiftRows] = await db.execute("SELECT initial_odometer, final_odometer, current_odometer, status FROM shifts WHERE DATE(CONVERT_TZ(start_time, '+00:00', '-07:00')) = ?", [targetDate]);
     const shift = shiftRows[0];
 
     // 🧠 MATEMÁTICA OPERATIVA INTEGRAL
@@ -518,22 +578,28 @@ router.get('/dashboard', async (req, res) => {
     const totalOperativo = Number(didi.total_viajes_bruto) + Number(priv.total) + totalRecompensas; // Ingreso Bruto antes de App Fee e Impuestos
 
     const kmProductivos = Number(didi.km_didi) + Number(priv.km_privado);
+    const kmPersonales = Number(pers.km_personal);
+    
     const initialOdo = shift?.initial_odometer || 0;
     const finalOdo = shift?.final_odometer || 0;
-    const kmTotalesOdo = finalOdo > 0 ? (finalOdo - initialOdo) : (kmProductivos + kmPersonal);
+    const currentOdo = shift?.current_odometer || 0;
     
-    // Los kilómetros muertos son el remanente después de quitar Productivos Y Personales
-    const kmMuertos = Math.max(0, kmTotalesOdo - kmProductivos - kmPersonal);
+    // Matriz de Kilometraje Real: 
+    // Prioridad 1: Final (Cerrado)
+    // Prioridad 2: Actual (Sincronizado en vivo)
+    // Prioridad 3: Solo Productivo + Personales (Caso default)
+    const activeFinalDist = finalOdo > 0 ? finalOdo : (currentOdo > 0 ? currentOdo : 0);
+    const kmTotalesOdo = activeFinalDist > 0 ? (activeFinalDist - initialOdo) : (kmProductivos + kmPersonales);
+    
+    // KM Operativos son los que realmente se usaron para generar dinero (Excluye Personales)
+    const kmOperativos = kmTotalesOdo > kmPersonales ? (kmTotalesOdo - kmPersonales) : kmProductivos;
+    const kmMuertosNegocio = kmOperativos > kmProductivos ? (kmOperativos - kmProductivos) : 0;
 
     const costoKm = fuel?.costo_real_km || 0;
-    const gastoGasolina = kmTotalesOdo * costoKm;
+    const gastoGasolina = kmTotalesOdo * costoKm; // La gasolina se gasta igual
 
     const utilidadReal = totalIngresosEnMano - gastoGasolina;
-    
-    // ROI Real = Ingreso Bruto / (KM Movidos - KM Personales)
-    // Esto asegura que los KM personales no diluyan la eficiencia del negocio.
-    const kmNegocio = Math.max(kmProductivos, kmTotalesOdo - kmPersonal);
-    const roi = kmNegocio > 0 ? (totalOperativo / kmNegocio) : 0;
+    const roi = kmOperativos > 0 ? (totalOperativo / kmOperativos) : 0;
 
     res.json({
       success: true,
@@ -546,8 +612,8 @@ router.get('/dashboard', async (req, res) => {
       gastoGasolina: gastoGasolina,
       roi: roi,
       total_km: kmTotalesOdo,
-      km_muertos: kmMuertos,
-      km_personal: kmPersonal,
+      km_muertos: kmMuertosNegocio,
+      km_personal: kmPersonales,
       km_didi: Number(didi.km_didi),
       km_privado: Number(priv.km_privado),
       ingresoEfectivo: Number(didi.ingresoEfectivo) + Number(priv.total),

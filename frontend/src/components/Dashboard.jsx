@@ -6,7 +6,7 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
 
-  const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0 });
+  const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, km_personal: 0 });
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(initialDate);
   const [activeShift, setActiveShift] = useState(null);
@@ -15,6 +15,8 @@ const Dashboard = () => {
   const [denoms, setDenoms] = useState({ m1: 0, m2: 0, m5: 0, m10: 0, b20: 0, b50: 0, b100: 0, b200: 0, b500: 0 });
   const dailyGoal = 500.00;
   const [showRestDayModal, setShowRestDayModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncOdo, setSyncOdo] = useState('');
 
   const totalDenoms = (denoms.m1 * 1) + (denoms.m2 * 2) + (denoms.m5 * 5) + (denoms.m10 * 10) + (denoms.b20 * 20) + (denoms.b50 * 50) + (denoms.b100 * 100) + (denoms.b200 * 200) + (denoms.b500 * 500);
 
@@ -27,27 +29,31 @@ const Dashboard = () => {
   const fetchDashboardData = () => {
     setLoading(true);
     checkShift();
-    setStats({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, isRestDay: false });
+    setStats({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, km_personal: 0, isRestDay: false });
     fetch(`http://localhost:3001/api/dashboard?date=${date}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) setStats({
-          currentDisposition: Number(d.currentDisposition || 0),
-          ingresoBruto: Number(d.ingresoBruto || 0),
-          cuotaDidi: Number(d.cuotaDidi || 0),
-          incentivos: Number(d.incentivos || 0),
-          impuestos: Number(d.impuestos || 0),
-          utilidadReal: Number(d.utilidadReal || 0),
-          gastoGasolina: Number(d.gastoGasolina || 0),
-          roi: Number(d.roi || 0),
-          totalKmDidi: Number(d.total_km || 0),
-          ingresoEfectivo: Number(d.ingresoEfectivo || 0),
-          ingresoTarjeta: Number(d.ingresoTarjeta || 0),
-          km_muertos: Number(d.km_muertos || 0),
-          km_didi: Number(d.km_didi || 0),
-          km_privado: Number(d.km_privado || 0),
-          isRestDay: Number(d.shift_initial_odometer) === -1
-        });
+        if (d.success) {
+          setStats({
+            currentDisposition: Number(d.currentDisposition || 0),
+            ingresoBruto: Number(d.ingresoBruto || 0),
+            cuotaDidi: Number(d.cuotaDidi || 0),
+            incentivos: Number(d.incentivos || 0),
+            impuestos: Number(d.impuestos || 0),
+            utilidadReal: Number(d.utilidadReal || 0),
+            gastoGasolina: Number(d.gastoGasolina || 0),
+            roi: Number(d.roi || 0),
+            totalKmDidi: Number(d.total_km || 0),
+            ingresoEfectivo: Number(d.ingresoEfectivo || 0),
+            ingresoTarjeta: Number(d.ingresoTarjeta || 0),
+            km_muertos: Number(d.km_muertos || 0),
+            km_didi: Number(d.km_didi || 0),
+            km_privado: Number(d.km_privado || 0),
+            km_personal: Number(d.km_personal || 0),
+            isRestDay: Number(d.shift_initial_odometer) === -1
+          });
+          localStorage.setItem('shared_audit_date', date); // 🏁 Sincronizar fecha global
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -78,6 +84,22 @@ const Dashboard = () => {
     }
   };
 
+  const handleSyncOdometer = async () => {
+    if (!syncOdo || !activeShift) return;
+    const response = await fetch('http://localhost:3001/api/shifts/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shift_id: activeShift.id, current_odometer: Number(syncOdo) })
+    });
+    if (response.ok) {
+      setShowSyncModal(false);
+      setSyncOdo('');
+      fetchDashboardData();
+    } else {
+      alert("Error al sincronizar");
+    }
+  };
+
   const handleMarkRestDayConfirm = async () => {
     try {
       const response = await fetch('http://localhost:3001/api/shifts/rest', {
@@ -97,7 +119,9 @@ const Dashboard = () => {
     }
   };
 
-  const { currentDisposition, ingresoBruto, cuotaDidi, incentivos, impuestos, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado, isRestDay } = stats;
+
+
+  const { currentDisposition, ingresoBruto, cuotaDidi, incentivos, impuestos, utilidadReal, gastoGasolina, roi, totalKmDidi, ingresoEfectivo, ingresoTarjeta, km_muertos, km_didi, km_privado, km_personal, isRestDay } = stats;
   const isToday = date === new Date().toLocaleDateString('sv');
   const isFuture = date > new Date().toLocaleDateString('sv');
   const isPast = date < new Date().toLocaleDateString('sv');
@@ -147,8 +171,16 @@ const Dashboard = () => {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {isRestDay ? 'DÍA DE DESCANSO' : (isFuture ? 'SIN ACTIVIDAD' : (isPast ? 'TURNO HISTÓRICO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')))}
+              {activeShift && activeShift.status === 'OPEN' && (
+                <button 
+                  onClick={() => setShowSyncModal(true)}
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--success-green)', cursor: 'pointer', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Zap size={10} fill="currentColor" /> ACTUALIZAR IQ
+                </button>
+              )}
             </div>
           </div>
           <button
@@ -288,9 +320,10 @@ const Dashboard = () => {
         <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
           <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--didi-orange)' }} title="DiDi"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_personal / totalKmDidi) * 100 : 0}%`, backgroundColor: '#9b59b6' }} title="Personal"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '9px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)' }}></div>
             <span>DiDi: {km_didi.toFixed(1)} km</span>
@@ -298,6 +331,10 @@ const Dashboard = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
             <span>Priv: {km_privado.toFixed(1)} km</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9b59b6' }}></div>
+            <span style={{ fontWeight: 'bold' }}>Pers: {km_personal.toFixed(1)} km</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
@@ -372,15 +409,7 @@ const Dashboard = () => {
 
 
 
-      {/* Backfill controls */}
-      {!isRestDay && !isFuture && activeShift && (
-        <div style={{ marginTop: '10px' }}>
-          <Link to={`/audit?date=${date}`} className="btn btn-primary" style={{ flexDirection: 'column', height: '110px', fontSize: '15px', width: '100%', gap: '10px' }}>
-            <Camera size={38} />
-            Lector Mágico (Auditoría IA)
-          </Link>
-        </div>
-      )}
+
 
       {/* Rest day control */}
       {!isRestDay && !isFuture && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || isPast)) && (
@@ -388,6 +417,28 @@ const Dashboard = () => {
           💤 Marcar como Día Descansado
         </button>
       )}
+      {/* ⚡ Modal Sincronizar Odómetro (En Vivo) */}
+      {showSyncModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <h3 style={{ fontSize: '14px', textAlign: 'center' }}>SINCRONIZAR AVANCE REAL</h3>
+            <p style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>Escribe tu odómetro actual para calcular tu ROI real en este momento.</p>
+            <input 
+              type="number" 
+              value={syncOdo} 
+              onChange={e => setSyncOdo(e.target.value)}
+              placeholder="Ej: 195750"
+              autoFocus
+              style={{ width: '100%', padding: '12px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', fontSize: '18px', textAlign: 'center' }}
+            />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowSyncModal(false)} style={{ flex: 1 }}>Cerrar</button>
+              <button className="btn btn-primary" onClick={handleSyncOdometer} style={{ flex: 1 }}>Actualizar IQ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
