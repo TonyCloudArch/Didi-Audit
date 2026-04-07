@@ -41,19 +41,19 @@ const App = () => {
         padding: '12px 0 24px 0',
         zIndex: 1000
       }}>
-        <Link to={`/${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/' ? 'var(--brand-purple)' : 'var(--text-muted)' }}>
           <LayoutDashboard size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Dashboard</span>
         </Link>
-        <Link to={`/history${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/history' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/history${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/history' ? 'var(--brand-purple)' : 'var(--text-muted)' }}>
           <History size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Viajes</span>
         </Link>
-        <Link to={`/cubo${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/cubo' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/cubo${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/cubo' ? 'var(--brand-purple)' : 'var(--text-muted)' }}>
           <Fuel size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Cargas</span>
         </Link>
-        <Link to={`/settings${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/settings' ? 'var(--didi-orange)' : 'var(--text-muted)' }}>
+        <Link to={`/settings${dateQuery}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: location.pathname === '/settings' ? 'var(--brand-purple)' : 'var(--text-muted)' }}>
           <SettingsIcon size={24} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>Ajustes</span>
         </Link>

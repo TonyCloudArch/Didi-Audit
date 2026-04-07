@@ -1,6 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown, Target, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown, Target, Zap, ChevronLeft, ChevronRight, Navigation } from 'lucide-react';
+import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+
+// 🛰️ Fix de Iconos Leaflet (Standard)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+// 🧭 Auto-ajuste de vista del Radar
+const MapResizer = ({ points }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (points && points.length > 0) {
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, { padding: [20, 20] });
+    }
+  }, [points, map]);
+  return null;
+};
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -18,6 +40,8 @@ const Dashboard = () => {
   const [showRestDayModal, setShowRestDayModal] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncOdo, setSyncOdo] = useState('');
+  const [gpsRoute, setGpsRoute] = useState([]); // [[lat, lng], ...]
+  const [lastPos, setLastPos] = useState(null);
 
   const totalDenoms = (denoms.m1 * 1) + (denoms.m2 * 2) + (denoms.m5 * 5) + (denoms.m10 * 10) + (denoms.b20 * 20) + (denoms.b50 * 50) + (denoms.b100 * 100) + (denoms.b200 * 200) + (denoms.b500 * 500);
 
@@ -74,9 +98,30 @@ const Dashboard = () => {
       .catch(() => setLoading(false));
   };
 
+  const fetchGpsData = () => {
+    fetch(`http://localhost:3001/api/gps/route?date=${date}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.route) {
+          setGpsRoute(d.route);
+          setLastPos(d.lastPos);
+        }
+      })
+      .catch(e => console.error("GPS fetch error:", e));
+  };
+
   useEffect(() => {
     fetchDashboardData();
+    fetchGpsData();
   }, [date]);
+
+  useEffect(() => {
+    let interval;
+    if (activeShift && date === new Date().toLocaleDateString('sv')) {
+      interval = setInterval(fetchGpsData, 30000); // Radar refresh cada 30s
+    }
+    return () => clearInterval(interval);
+  }, [date, activeShift]);
 
   const handleShiftAction = async () => {
     const isOpening = !activeShift;
@@ -272,7 +317,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: '0', opacity: isFuture ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
+      <div className="card" style={{ marginTop: '0', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
         <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '0px', overflow: 'hidden' }}>
           <div style={{ 
             width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, 
@@ -284,7 +329,7 @@ const Dashboard = () => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {isFuture
+            {(date > new Date().toLocaleDateString('sv'))
               ? 'Aún no se puede registrar progreso en el futuro.'
               : utilidadReal >= dailyGoal
                 ? <span style={{ color: 'var(--success-green)' }}>✅ ¡META LOGRADA!</span>
@@ -296,7 +341,7 @@ const Dashboard = () => {
 
       {/* 🎭 La Auditoría Maestra Financiera */}
       <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Cascada Financiera de Rentabilidad</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '2px', marginBottom: '6px', opacity: isFuture ? 0.3 : 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '2px', marginBottom: '6px', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1 }}>
 
         {/* ROW 1: Espejismos y Bonos */}
         <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
@@ -337,21 +382,62 @@ const Dashboard = () => {
           <div className="card-title">GASOLINA PERSONAL</div>
           <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal).toFixed(2)}</div>
         </div>
-
       </div>
 
+      {/* 🗺️ RADAR TÁCTICO GPS (LUGAR PERFECTO) */}
+      <div className="card" style={{ padding: '0', overflow: 'hidden', height: '220px', border: '1px solid #1a1a1a', position: 'relative' }}>
+        <div style={{ 
+          position: 'absolute', 
+          top: '10px', 
+          left: '10px', 
+          zIndex: 1000, 
+          backgroundColor: 'rgba(0,0,0,0.85)', 
+          padding: '6px 10px', 
+          fontSize: '10px', 
+          fontWeight: '900', 
+          color: 'var(--brand-purple)',
+          borderLeft: '3px solid var(--brand-purple)',
+          letterSpacing: '1px'
+        }}>
+          {activeShift ? '🛰️ RASTREO EN VIVO' : '🛰️ ARCHIVO DE RUTA'}
+        </div>
 
-
-
+        <MapContainer 
+          center={[23.2329, -106.4062]} // Mazatlán Center
+          zoom={13} 
+          style={{ height: '100%', width: '100%', backgroundColor: '#000' }}
+          zoomControl={false}
+          attributionControl={false}
+        >
+          <TileLayer 
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" 
+            style={{ filter: 'grayscale(1) invert(1) opacity(0.5)' }} 
+          />
+          {gpsRoute.length > 0 && (
+            <>
+              <Polyline positions={gpsRoute} color="var(--brand-purple)" weight={4} opacity={0.8} />
+              <MapResizer points={gpsRoute} />
+              {lastPos && (
+                <Marker position={lastPos}></Marker>
+              )}
+            </>
+          )}
+          {gpsRoute.length === 0 && (
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 100, color: '#444', textAlign: 'center', fontSize: '10px', fontWeight: 'bold' }}>
+              SIN DATOS GPS DISPONIBLES<br />(ESPERANDO INICIO DE MOTOR)
+            </div>
+          )}
+        </MapContainer>
+      </div>
 
       {/* Rest day control */}
-      {!isRestDay && !isFuture && stats.shift_status !== 'CLOSED' && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || isPast)) && (
+      {!isRestDay && !(date > new Date().toLocaleDateString('sv')) && stats.shift_status !== 'CLOSED' && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || (date < new Date().toLocaleDateString('sv')))) && (
         <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
           💤 Marcar como Día Descansado
         </button>
       )}
-        </>
-      )}
+    </>
+  )}
 
       {showShiftModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>

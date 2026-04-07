@@ -636,4 +636,48 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
+router.get('/gps/route', async (req, res) => {
+  const { date } = req.query;
+  try {
+    // 🔍 1. Buscar turno de ese día para obtener horarios exactos
+    const [shifts] = await db.execute(
+      'SELECT id, start_time, end_time FROM shifts WHERE DATE(start_time) = ? ORDER BY id DESC LIMIT 1',
+      [date]
+    );
+
+    const shift = shifts[0];
+    if (!shift) {
+      return res.json({ success: true, route: [], lastPos: null });
+    }
+
+    const startTime = new Date(shift.start_time).toISOString().slice(0, 19).replace('T', ' ');
+    const endTime = shift.end_time 
+      ? new Date(shift.end_time).toISOString().slice(0, 19).replace('T', ' ')
+      : new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    // 🗺️ 2. TODO: Conectar con la DB de Traccar aquí
+    // Por ahora, generamos un rastro simulado en Mazatlán para probar el Radar Púrpura
+    const mockRoute = [
+        [23.2329, -106.4062],
+        [23.2350, -106.4080],
+        [23.2380, -106.4100],
+        [23.2400, -106.4150],
+        [23.2420, -106.4120],
+        [23.2450, -106.4180]
+    ];
+    
+    res.json({
+      success: true,
+      route: mockRoute,
+      lastPos: mockRoute[mockRoute.length - 1],
+      startTime,
+      endTime
+    });
+
+  } catch (err) {
+    console.error("GPS Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
