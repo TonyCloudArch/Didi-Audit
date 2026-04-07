@@ -308,14 +308,22 @@ const Dashboard = () => {
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(impuestos || 0).toFixed(2)}</div>
         </div>
 
-        {/* ROW 4: Costo logístico profundo vs El Gran Sobreviviente */}
+        {/* ⛽️ IMPACTO DE COMBUSTIBLE PROPORCIONAL */}
         <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>IMPACTO DE GASOLINA</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(gastoGasolina || 0).toFixed(2)}</div>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>GASOLINA (NEGOCIO)</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
         </div>
         <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>UTILIDAD REAL LIBRE</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--success-green)' }}>${utilidadReal.toFixed(2)}</div>
+          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>GASOLINA PERSONAL</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal).toFixed(2)}</div>
+        </div>
+
+        {/* ROW EL GRAN SOBREVIVIENTE */}
+        <div className="card" style={{ padding: '10px', gridColumn: 'span 2' }}>
+          <div className="card-title" style={{ fontSize: '11px', marginBottom: '2px' }}>UTILIDAD REAL (DINERO EN MANO)</div>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--success-green)' }}>
+            ${(utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal)).toFixed(2)}
+          </div>
         </div>
 
       </div>

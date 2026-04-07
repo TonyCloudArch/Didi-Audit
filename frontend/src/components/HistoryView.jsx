@@ -127,7 +127,7 @@ const HistoryView = () => {
   };
 
   const totalIncomeAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'privado' ? curr.pago : (curr.tipo === 'personal' ? 0 : curr.ganancias_desp_imp)), 0);
-  const totalKmAll = entries.reduce((acc, curr) => acc + parseFloat(curr.distancia), 0);
+  const totalKmAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'personal' ? 0 : curr.distancia), 0);
   const avgEfficiencyAll = totalKmAll > 0 ? (totalIncomeAll / totalKmAll) : 0;
 
   return (
