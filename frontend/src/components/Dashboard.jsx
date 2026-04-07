@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown, Target, Zap } from 'lucide-react';
+import { Camera, Fuel, AlertCircle, TrendingUp, TrendingDown, Target, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialDate = searchParams.get('date') || new Date().toLocaleDateString('sv');
+  const dateInputRef = useRef(null);
 
   const [stats, setStats] = useState({ currentDisposition: 0, ingresoBruto: 0, cuotaDidi: 0, incentivos: 0, impuestos: 0, utilidadReal: 0, gastoGasolina: 0, roi: 0, totalKmDidi: 0, ingresoEfectivo: 0, ingresoTarjeta: 0, km_muertos: 0, km_didi: 0, km_privado: 0, km_personal: 0, shift_status: null });
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,19 @@ const Dashboard = () => {
   const [syncOdo, setSyncOdo] = useState('');
 
   const totalDenoms = (denoms.m1 * 1) + (denoms.m2 * 2) + (denoms.m5 * 5) + (denoms.m10 * 10) + (denoms.b20 * 20) + (denoms.b50 * 50) + (denoms.b100 * 100) + (denoms.b200 * 200) + (denoms.b500 * 500);
+
+  const changeDate = (offset) => {
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() + offset);
+    const newDate = d.toISOString().split('T')[0];
+    setDate(newDate);
+    setSearchParams({ date: newDate });
+  };
+
+  const formatDateLabel = (dtString) => {
+    const d = new Date(dtString + 'T12:00:00');
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase();
+  };
 
   const checkShift = () => {
     fetch('http://localhost:3001/api/shifts/active')
@@ -129,46 +143,62 @@ const Dashboard = () => {
 
   return (
     <div className="mobile-container">
-      <div className="header" style={{ display: 'grid', gridTemplateColumns: '110px 1fr 110px', alignItems: 'center', padding: '15px', borderBottom: '1px solid #222', gap: '10px' }}>
+      <div className="header" style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', alignItems: 'center', padding: '15px', borderBottom: '1px solid #222', gap: '5px' }}>
         <button
           onClick={() => !isRestDay && !isFuture && setShowShiftModal(true)}
           className="btn"
           style={{
-            fontSize: '10px',
-            width: '110px',
-            height: '32px',
-            padding: '0 8px',
-            borderRadius: '16px',
+            fontSize: '13px',
+            width: '150px',
+            height: '42px',
+            borderRadius: '21px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '4px',
             backgroundColor: (isRestDay || isFuture) ? '#111' : (stats.shift_status === 'CLOSED' ? '#222' : (activeShift ? 'var(--didi-orange)' : 'var(--success-green)')),
             color: (isRestDay || isFuture) ? '#444' : (stats.shift_status === 'CLOSED' ? '#666' : (activeShift ? '#fff' : '#000')),
-            fontWeight: 'bold',
+            fontWeight: '900',
             border: (isRestDay || isFuture) ? '1px dashed #333' : 'none',
-            cursor: (isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)) ? 'not-allowed' : 'pointer'
+            cursor: (isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)) ? 'not-allowed' : 'pointer',
+            letterSpacing: '0.5px'
           }}
           disabled={isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)}
         >
-          {isRestDay ? '💤 Descanso' : isFuture ? '🔒 Inactivo' : (stats.shift_status === 'CLOSED' && !activeShift ? '✔️ Cerrado' : (activeShift ? `🚩 Finalizar` : '🚀 Iniciar'))}
+          {isRestDay ? 'DESCANSO' : isFuture ? 'INACTIVO' : (stats.shift_status === 'CLOSED' && !activeShift ? 'CERRADO' : (activeShift ? `FINALIZAR` : 'INICIAR'))}
         </button>
 
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: 'white', fontSize: '36px', fontWeight: '900', lineHeight: 1 }}>${currentDisposition.toFixed(0)}</div>
+          <div style={{ color: 'white', fontSize: '38px', fontWeight: '900', lineHeight: 1 }}>${currentDisposition.toFixed(0)}</div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => {
-              const newDate = e.target.value;
-              setDate(newDate);
-              setSearchParams({ date: newDate });
-            }}
-            style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '4px', borderRadius: '6px', fontSize: '10px', width: '110px', outline: 'none' }}
-          />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', backgroundColor: '#1a1a1a', padding: '1px', height: '42px', borderRadius: '21px', border: '1px solid #333', width: '150px' }}>
+          <button onClick={() => changeDate(-1)} style={{ background: 'none', border: 'none', color: '#888', height: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronLeft size={20} />
+          </button>
+          
+          <div 
+            onClick={() => dateInputRef.current && dateInputRef.current.showPicker()}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 3, justifyContent: 'center', cursor: 'pointer' }}
+          >
+            <span style={{ fontSize: '14px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+              {formatDateLabel(date).replace('-', ' ')}
+            </span>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={date}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                setDate(newDate);
+                setSearchParams({ date: newDate });
+              }}
+              style={{ position: 'absolute', top: 0, left: 0, width: '0', height: '0', opacity: 0, pointerEvents: 'none' }}
+            />
+          </div>
+
+          <button onClick={() => changeDate(1)} style={{ background: 'none', border: 'none', color: '#888', height: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronRight size={20} />
+          </button>
         </div>
       </div>
 
