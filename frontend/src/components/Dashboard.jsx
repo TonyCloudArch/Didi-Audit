@@ -129,25 +129,36 @@ const Dashboard = () => {
 
   return (
     <div className="mobile-container">
-      <div className="header" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              En Caja
-              <span style={{ color: 'var(--text-main)', fontSize: '20px' }}>${currentDisposition.toFixed(2)}</span>
-            </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '2px', marginBottom: 0 }}>
-              {isRestDay
-                ? '🔵 DÍA DESCANSADO'
-                : isFuture
-                  ? '📅 FECHA FUTURA / INACTIVO'
-                  : (activeShift && activeShift.status === 'OPEN')
-                    ? `🟢 TURNO EN CURSO (ODO: ${activeShift.initial_odometer})`
-                    : (stats.shift_status === 'CLOSED')
-                      ? '🔴 HISTÓRICO / CERRADO'
-                      : '🟡 ESPERANDO INICIO DE TURNO'}
-            </p>
-          </div>
+      <div className="header" style={{ display: 'grid', gridTemplateColumns: '110px 1fr 110px', alignItems: 'center', padding: '15px', borderBottom: '1px solid #222', gap: '10px' }}>
+        <button
+          onClick={() => !isRestDay && !isFuture && setShowShiftModal(true)}
+          className="btn"
+          style={{
+            fontSize: '10px',
+            width: '110px',
+            height: '32px',
+            padding: '0 8px',
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            backgroundColor: (isRestDay || isFuture) ? '#111' : (stats.shift_status === 'CLOSED' ? '#222' : (activeShift ? 'var(--didi-orange)' : 'var(--success-green)')),
+            color: (isRestDay || isFuture) ? '#444' : (stats.shift_status === 'CLOSED' ? '#666' : (activeShift ? '#fff' : '#000')),
+            fontWeight: 'bold',
+            border: (isRestDay || isFuture) ? '1px dashed #333' : 'none',
+            cursor: (isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)) ? 'not-allowed' : 'pointer'
+          }}
+          disabled={isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)}
+        >
+          {isRestDay ? '💤 Descanso' : isFuture ? '🔒 Inactivo' : (stats.shift_status === 'CLOSED' && !activeShift ? '✔️ Cerrado' : (activeShift ? `🚩 Finalizar` : '🚀 Iniciar'))}
+        </button>
+
+        <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ color: 'white', fontSize: '36px', fontWeight: '900', lineHeight: 1 }}>${currentDisposition.toFixed(0)}</div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <input
             type="date"
             value={date}
@@ -156,131 +167,20 @@ const Dashboard = () => {
               setDate(newDate);
               setSearchParams({ date: newDate });
             }}
-            style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '6px', borderRadius: '6px', fontSize: '11px', outline: 'none' }}
+            style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '4px', borderRadius: '6px', fontSize: '10px', width: '110px', outline: 'none' }}
           />
         </div>
       </div>
 
-      {/* 🏁 Gestión de Turno (APERTURA / CIERRE) */}
-      <div className="card" style={{
-        padding: '12px',
-        borderLeft: isRestDay ? '4px solid #3498db' : (activeShift ? '4px solid var(--didi-orange)' : (stats.shift_status === 'CLOSED' ? '4px solid #444' : (isFuture ? '4px solid #222' : '4px solid var(--success-green)'))),
-        background: isRestDay ? 'rgba(52,152,219,0.05)' : (activeShift ? 'rgba(255,100,0,0.05)' : 'var(--card-bg)'),
-        opacity: (isFuture || (isPast && !activeShift && stats.shift_status !== 'CLOSED')) ? 0.4 : 1,
-        filter: (isFuture || (isPast && !activeShift && stats.shift_status !== 'CLOSED')) ? 'grayscale(1)' : 'none',
-        pointerEvents: (isFuture || (isPast && !activeShift && stats.shift_status !== 'CLOSED')) ? 'none' : 'auto'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isRestDay ? 'DÍA DE DESCANSO' : (isFuture ? 'SIN ACTIVIDAD' : (stats.shift_status === 'CLOSED' ? 'TURNO FINALIZADO' : (activeShift ? 'TURNO EN CURSO' : 'INICIO DE TURNO')))}
-              {activeShift && activeShift.status === 'OPEN' && (
-                <button 
-                  onClick={() => setShowSyncModal(true)}
-                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--success-green)', cursor: 'pointer', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <Zap size={10} fill="currentColor" /> ACTUALIZAR IQ
-                </button>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={() => !isRestDay && !isFuture && setShowShiftModal(true)}
-            className="btn"
-            style={{
-              fontSize: '11px',
-              padding: '8px 16px',
-              borderRadius: '20px',
-              backgroundColor: (isRestDay || isFuture) ? '#1a1a1a' : (stats.shift_status === 'CLOSED' ? '#222' : (activeShift ? 'var(--didi-orange)' : 'var(--success-green)')),
-              color: (isRestDay || isFuture) ? '#555' : (stats.shift_status === 'CLOSED' ? '#777' : (activeShift ? '#fff' : '#000')),
-              fontWeight: 'bold',
-              border: (isRestDay || isFuture) ? '1px dashed #444' : 'none',
-              cursor: (isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)) ? 'not-allowed' : 'pointer'
-            }}
-            disabled={isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)}
-          >
-            {isRestDay ? 'Descansando 💤' : isFuture ? 'Próximamente' : (stats.shift_status === 'CLOSED' && !activeShift ? '✔️ Terminado' : (activeShift ? `🚩 Finalizar ${new Date(activeShift.start_time).toLocaleDateString('sv') === date ? '' : '(Turno Pendiente)'}` : '🚀 Iniciar'))}
-          </button>
+
+      {/* 🧠 Inteligencia Financiera (ROI Diario) */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '50px', color: 'var(--text-muted)' }}>
+          <Zap size={30} style={{ marginBottom: '15px', color: 'var(--didi-orange)', opacity: 0.5 }} />
+          <div style={{ fontSize: '10px', letterSpacing: '1px' }}>AUDITANDO CAPITAL...</div>
         </div>
-      </div>
-
-      {showShiftModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '14px', textAlign: 'center' }}>{activeShift ? 'CIERRE DE JORNADA' : 'INICIO DE JORNADA'}</h3>
-
-            <div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>ODÓMETRO TOTAL</div>
-              <input
-                type="number"
-                value={shiftInputs.odometer}
-                onChange={e => setShiftInputs({ ...shiftInputs, odometer: e.target.value })}
-                placeholder="Ej: 195471"
-                style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', color: 'white', borderRadius: '6px' }}
-              />
-            </div>
-
-            <div style={{ borderTop: '1px solid #333', paddingTop: '10px' }}>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px', textAlign: 'center' }}>CONTADOR DE EFECTIVO (DENOMINACIONES)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                {[1, 2, 5, 10].map(v => (
-                  <div key={`m${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#1a1a1a', padding: '5px', borderRadius: '4px' }}>
-                    <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold' }}>${v}</div>
-                    <input
-                      type="number"
-                      value={denoms[`m${v}`] === 0 ? '' : denoms[`m${v}`]}
-                      onChange={e => setDenoms({ ...denoms, [`m${v}`]: Number(e.target.value) })}
-                      onFocus={e => e.target.select()}
-                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }}
-                      placeholder="0"
-                    />
-                  </div>
-                ))}
-                {[20, 50, 100, 200, 500].map(v => (
-                  <div key={`b${v}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#222', padding: '5px', borderRadius: '4px', border: '1px solid #333' }}>
-                    <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold', color: 'var(--success-green)' }}>${v}</div>
-                    <input
-                      type="number"
-                      value={denoms[`b${v}`] === 0 ? '' : denoms[`b${v}`]}
-                      onChange={e => setDenoms({ ...denoms, [`b${v}`]: Number(e.target.value) })}
-                      onFocus={e => e.target.select()}
-                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }}
-                      placeholder="0"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: '10px', backgroundColor: 'var(--success-green)', color: 'black', padding: '8px', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold' }}>
-                TOTAL EFECTIVO: ${totalDenoms.toFixed(2)}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-              <button className="btn btn-secondary" onClick={() => setShowShiftModal(false)} style={{ flex: 1 }}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleShiftAction} style={{ flex: 1 }}>Guardar Registro</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 💤 Confirmación de Día Descansado */}
-      {showRestDayModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '90vh', overflowY: 'auto', borderLine: '1px solid #333' }}>
-            <h3 style={{ fontSize: '14px', textAlign: 'center', color: '#888' }}>CORTE DE ACTIVIDAD</h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-main)', textAlign: 'center' }}>
-              ¿Confirmas que el día <strong>{date}</strong> será marcado oficialmente como DÍA DESCANSADO?
-            </p>
-            <p style={{ fontSize: '11px', color: 'var(--error-red)', textAlign: 'center', backgroundColor: 'rgba(255, 59, 48, 0.1)', padding: '10px', borderRadius: '4px' }}>
-              ⚠️ Esta acción bloqueará permanentemente la carga del Lector Mágico y los Tickets de Gasolina para este día en específico. No se podrá deshacer.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-              <button className="btn btn-secondary" onClick={() => setShowRestDayModal(false)} style={{ flex: 1 }}>Cancelar</button>
-              <button className="btn" onClick={handleMarkRestDayConfirm} style={{ flex: 1, backgroundColor: '#3498db', color: 'white', fontWeight: 'bold' }}>Sí, aplicar descanso</button>
-            </div>
-          </div>
-        </div>
-      )}
+      ) : (
+        <>
 
       {/* 🧠 Inteligencia Financiera (ROI Diario) */}
       <div className="card" style={{
@@ -417,6 +317,65 @@ const Dashboard = () => {
         <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
           💤 Marcar como Día Descansado
         </button>
+      )}
+        </>
+      )}
+
+      {showShiftModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '14px', textAlign: 'center' }}>{activeShift ? 'CIERRE DE JORNADA' : 'INICIO DE JORNADA'}</h3>
+            <div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>ODÓMETRO TOTAL</div>
+              <input
+                type="number"
+                value={shiftInputs.odometer}
+                onChange={e => setShiftInputs({ ...shiftInputs, odometer: e.target.value })}
+                placeholder="Ej: 195471"
+                style={{ width: '100%', padding: '8px', backgroundColor: '#111', border: '1px solid #333', color: 'white', borderRadius: '6px' }}
+              />
+            </div>
+            <div style={{ borderTop: '1px solid #333', paddingTop: '10px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px', textAlign: 'center' }}>CONTADOR DE EFECTIVO</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {[1, 2, 5, 10, 20, 50, 100, 200, 500].map(v => (
+                  <div key={v} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#1a1a1a', padding: '5px', borderRadius: '4px' }}>
+                    <div style={{ fontSize: '10px', width: '25px', fontWeight: 'bold' }}>${v}</div>
+                    <input
+                      type="number"
+                      value={denoms[v < 20 ? `m${v}` : `b${v}`] === 0 ? '' : denoms[v < 20 ? `m${v}` : `b${v}`]}
+                      onChange={e => setDenoms({ ...denoms, [v < 20 ? `m${v}` : `b${v}`]: Number(e.target.value) })}
+                      style={{ width: '100%', border: 'none', background: 'none', color: 'white', fontSize: '12px', textAlign: 'right' }}
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '10px', backgroundColor: 'var(--success-green)', color: 'black', padding: '8px', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold' }}>
+                TOTAL EFECTIVO: ${totalDenoms.toFixed(2)}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowShiftModal(false)} style={{ flex: 1 }}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleShiftAction} style={{ flex: 1 }}>Guardar Registro</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRestDayModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '14px', textAlign: 'center', color: '#888' }}>CORTE DE ACTIVIDAD</h3>
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', textAlign: 'center' }}>
+              ¿Confirmas que el día <strong>{date}</strong> será marcado oficialmente como DÍA DESCANSADO?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowRestDayModal(false)} style={{ flex: 1 }}>Cancelar</button>
+              <button className="btn" onClick={handleMarkRestDayConfirm} style={{ flex: 1, backgroundColor: '#3498db', color: 'white', fontWeight: 'bold' }}>Sí, aplicar descanso</button>
+            </div>
+          </div>
+        </div>
       )}
       {/* ⚡ Modal Sincronizar Odómetro (En Vivo) */}
       {showSyncModal && (
