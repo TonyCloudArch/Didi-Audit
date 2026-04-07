@@ -275,17 +275,23 @@ const Dashboard = () => {
 
       <div className="card" style={{ marginTop: '0', opacity: isFuture ? 0.3 : 1, padding: '12px' }}>
         <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{ width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, height: '100%', backgroundColor: 'var(--didi-orange)', transition: 'width 0.5s ease' }}></div>
+          <div style={{ 
+            width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, 
+            height: '100%', 
+            background: 'linear-gradient(90deg, #ffffff 0%, var(--success-green) 100%)', 
+            transition: 'width 0.5s ease',
+            boxShadow: utilidadReal >= dailyGoal ? '0 0 10px var(--success-green)' : 'none'
+          }}></div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             {isFuture
               ? 'Aún no se puede registrar progreso en el futuro.'
               : utilidadReal >= dailyGoal
-                ? '✅ ¡META LOGRADA!'
+                ? <span style={{ color: 'var(--success-green)' }}>✅ ¡META LOGRADA!</span>
                 : `Faltan $${(dailyGoal - (utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal))).toFixed(2)}`}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--didi-orange)', opacity: 0.8 }}>META: ${dailyGoal} MXN</div>
+          <div style={{ fontSize: '11px', color: utilidadReal >= dailyGoal ? 'var(--success-green)' : 'var(--text-muted)', opacity: 0.8 }}>META: ${dailyGoal} MXN</div>
         </div>
       </div>
 
