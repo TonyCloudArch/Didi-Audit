@@ -212,118 +212,107 @@ const Dashboard = () => {
       ) : (
         <>
 
-      {/* 🧠 Inteligencia Financiera (ROI Diario) */}
-      <div className="card" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+      {/* 🧠 Consola de Rendimiento Maestro (ROI + Dinero Real) */}
+      <div className="card" style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        alignItems: 'center', 
+        padding: '12px 10px',
         marginBottom: '10px',
         opacity: isFuture ? 0.3 : 1
       }}>
-        <div>
-          <div className="card-title">Selección IQ (ROI Real)</div>
+        <div style={{ textAlign: 'center', borderRight: '1px solid #222' }}>
+          <div className="card-title">EFICIENCIA</div>
           <div style={{
-            fontSize: '28px',
-            fontWeight: 'bold',
+            fontSize: '24px',
             color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)'))))
           }}>
-            ${roi.toFixed(2)}<span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/km</span>
+            ${roi.toFixed(2)}<span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '2px' }}>/km</span>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <span style={{
-            backgroundColor: isFuture ? '#1a1a1a' : (roi >= 20 ? 'rgba(255,215,0,0.1)' : (roi >= 12 ? 'rgba(0,229,255,0.1)' : (roi >= 8 ? 'rgba(0,209,102,0.1)' : (roi >= 6 ? 'rgba(255,100,0,0.1)' : 'rgba(255,59,48,0.1)')))),
-            color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)')))),
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            boxShadow: roi >= 20 ? '0 0 10px rgba(255,215,0,0.3)' : 'none'
+
+        <div style={{ textAlign: 'center' }}>
+          <div className="card-title">UTILIDAD REAL</div>
+          <div style={{
+            fontSize: '24px',
+            color: 'var(--success-green)'
           }}>
-            {isFuture ? 'PLANIFICADO' : (roi >= 20 ? '🎫 BOLETO DORADO' : (roi >= 12 ? 'SÚPER ÉLITE' : (roi >= 8 ? 'EFICIENTE' : (roi >= 6 ? 'POBRE' : 'FATAL'))))}
-          </span>
+            ${(utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal)).toFixed(2)}
+          </div>
         </div>
       </div>
 
       {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
-      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '10px', opacity: isFuture ? 0.3 : 1 }}>
-        <div className="card-title" style={{ fontSize: '11px', textAlign: 'center' }}>EFICIENCIA DE RUTA (KM TOTALES: {totalKmDidi.toFixed(1)})</div>
-        <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
+      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '8px', opacity: isFuture ? 0.3 : 1, padding: '12px' }}>
+        <div className="card-title" style={{ fontSize: '9px', textAlign: 'center', marginBottom: '4px' }}>KILÓMETROS TOTALES: {totalKmDidi.toFixed(1)}</div>
+        <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '4px' }}>
           <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--didi-orange)' }} title="DiDi"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_personal / totalKmDidi) * 100 : 0}%`, backgroundColor: '#9b59b6' }} title="Personal"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '9px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)' }}></div>
-            <span>DiDi: {km_didi.toFixed(1)} km</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '9px', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)' }}></div>
+            <span>DIDI</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
-            <span>Priv: {km_privado.toFixed(1)} km</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
+            <span>PRIV</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9b59b6' }}></div>
-            <span style={{ fontWeight: 'bold' }}>Pers: {km_personal.toFixed(1)} km</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#9b59b6' }}></div>
+            <span>PERS</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
-            <span>Muertos: {km_muertos.toFixed(1)} km</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
+            <span>MUERTOS</span>
           </div>
         </div>
       </div>
 
       {/* 🎭 La Auditoría Maestra Financiera */}
-      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cascada Financiera de Rentabilidad</h3>
+      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Cascada Financiera de Rentabilidad</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px', marginBottom: '10px', opacity: isFuture ? 0.3 : 1 }}>
 
         {/* ROW 1: Espejismos y Bonos */}
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TOTAL INGRESO (FICTICIO)</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${ingresoBruto.toFixed(2)}</div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">TOTAL INGRESO (FICTICIO)</div>
+          <div style={{ fontSize: '18px' }}>${ingresoBruto.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>INCENTIVOS Y BONOS</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>+${incentivos.toFixed(2)}</div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">INCENTIVOS Y BONOS</div>
+          <div style={{ fontSize: '18px' }}>+${incentivos.toFixed(2)}</div>
         </div>
 
         {/* ROW 2: Liquidez Cruda (Lo que hay en la mano/cartera) */}
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>COBRADO EN EFECTIVO</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoEfectivo.toFixed(2)}</div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">COBRADO EN EFECTIVO</div>
+          <div style={{ fontSize: '16px' }}>${ingresoEfectivo.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>DEPÓSITO TARJETA</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>${ingresoTarjeta.toFixed(2)}</div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">DEPÓSITO TARJETA</div>
+          <div style={{ fontSize: '16px' }}>${ingresoTarjeta.toFixed(2)}</div>
         </div>
 
         {/* ROW 3: Evasiones y Costos Adheridos (Las "Mordidas" operativas) */}
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>TAJADA DE LA APP (DIDI)</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi || 0).toFixed(2)}</div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">TAJADA DE LA APP (DIDI)</div>
+          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi || 0).toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>IMPUESTOS DICTADOS</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${Math.abs(impuestos || 0).toFixed(2)}</div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">IMPUESTOS DICTADOS</div>
+          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(impuestos || 0).toFixed(2)}</div>
         </div>
 
         {/* ⛽️ IMPACTO DE COMBUSTIBLE PROPORCIONAL */}
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>GASOLINA (NEGOCIO)</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">GASOLINA (NEGOCIO)</div>
+          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px' }}>
-          <div className="card-title" style={{ fontSize: '9px', marginBottom: '2px' }}>GASOLINA PERSONAL</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-red)' }}>-${((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal).toFixed(2)}</div>
-        </div>
-
-        {/* ROW EL GRAN SOBREVIVIENTE */}
-        <div className="card" style={{ padding: '10px', gridColumn: 'span 2' }}>
-          <div className="card-title" style={{ fontSize: '11px', marginBottom: '2px' }}>UTILIDAD REAL (DINERO EN MANO)</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--success-green)' }}>
-            ${(utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal)).toFixed(2)}
-          </div>
+        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="card-title">GASOLINA PERSONAL</div>
+          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal).toFixed(2)}</div>
         </div>
 
       </div>
