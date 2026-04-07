@@ -495,9 +495,12 @@ router.get('/dashboard', async (req, res) => {
     `, [targetDate]);
     const didi = didiRows[0];
 
-    // 2. Datos Privados
     const [privRows] = await db.execute(`SELECT COALESCE(SUM(pago), 0) as total, COALESCE(SUM(distancia), 0) as km_privado FROM private_trips WHERE fecha = ?`, [targetDate]);
     const priv = privRows[0];
+
+    // 2.5 Datos Personales
+    const [personalRows] = await db.execute(`SELECT COALESCE(SUM(distancia), 0) as km_personal FROM personal_movements WHERE fecha = ?`, [targetDate]);
+    const kmPersonal = Number(personalRows[0].km_personal || 0);
 
     // 3. Gasolina (Costo dinámico: Tomamos el último costo válido > 0 para evitar distorsiones)
     const [fuelRows] = await db.execute("SELECT costo_real_km FROM fuel_receipts WHERE costo_real_km > 0 ORDER BY id DESC LIMIT 1");
@@ -517,14 +520,20 @@ router.get('/dashboard', async (req, res) => {
     const kmProductivos = Number(didi.km_didi) + Number(priv.km_privado);
     const initialOdo = shift?.initial_odometer || 0;
     const finalOdo = shift?.final_odometer || 0;
-    const kmTotalesOdo = finalOdo > 0 ? (finalOdo - initialOdo) : kmProductivos;
-    const kmMuertos = kmTotalesOdo > kmProductivos ? (kmTotalesOdo - kmProductivos) : 0;
+    const kmTotalesOdo = finalOdo > 0 ? (finalOdo - initialOdo) : (kmProductivos + kmPersonal);
+    
+    // Los kilómetros muertos son el remanente después de quitar Productivos Y Personales
+    const kmMuertos = Math.max(0, kmTotalesOdo - kmProductivos - kmPersonal);
 
     const costoKm = fuel?.costo_real_km || 0;
     const gastoGasolina = kmTotalesOdo * costoKm;
 
     const utilidadReal = totalIngresosEnMano - gastoGasolina;
-    const roi = kmTotalesOdo > 0 ? (totalOperativo / kmTotalesOdo) : 0;
+    
+    // ROI Real = Ingreso Bruto / (KM Movidos - KM Personales)
+    // Esto asegura que los KM personales no diluyan la eficiencia del negocio.
+    const kmNegocio = Math.max(kmProductivos, kmTotalesOdo - kmPersonal);
+    const roi = kmNegocio > 0 ? (totalOperativo / kmNegocio) : 0;
 
     res.json({
       success: true,
@@ -538,6 +547,7 @@ router.get('/dashboard', async (req, res) => {
       roi: roi,
       total_km: kmTotalesOdo,
       km_muertos: kmMuertos,
+      km_personal: kmPersonal,
       km_didi: Number(didi.km_didi),
       km_privado: Number(priv.km_privado),
       ingresoEfectivo: Number(didi.ingresoEfectivo) + Number(priv.total),
