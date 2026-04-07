@@ -151,7 +151,12 @@ const HistoryView = () => {
         </div>
 
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: 'white', fontSize: '38px', fontWeight: '900', lineHeight: 1 }}>${avgEfficiencyAll.toFixed(2)}</div>
+          <div style={{ 
+            color: (avgEfficiencyAll >= 20 ? '#FFD700' : (avgEfficiencyAll >= 12 ? '#00e5ff' : (avgEfficiencyAll >= 8 ? 'var(--success-green)' : (avgEfficiencyAll >= 6 ? 'var(--didi-orange)' : 'var(--error-red)')))),
+            fontSize: '38px', 
+            fontWeight: '900', 
+            lineHeight: 1 
+          }}>${avgEfficiencyAll.toFixed(2)}</div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', backgroundColor: '#1a1a1a', padding: '1px', height: '42px', borderRadius: '21px', border: '1px solid #333', width: '150px' }}>
