@@ -28,6 +28,8 @@ const HistoryView = () => {
     setSearchParams({ date: newDate });
   };
 
+  const isPast = date < new Date().toLocaleDateString('sv');
+
   const formatDateLabel = (dtString) => {
     const d = new Date(dtString + 'T12:00:00');
     return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase();
@@ -137,7 +139,7 @@ const HistoryView = () => {
           fontSize: '13px',
           width: '150px',
           height: '42px',
-          borderRadius: '21px',
+          borderRadius: '0px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -159,7 +161,7 @@ const HistoryView = () => {
           }}>${avgEfficiencyAll.toFixed(2)}</div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', backgroundColor: '#1a1a1a', padding: '1px', height: '42px', borderRadius: '21px', border: '1px solid #333', width: '150px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', backgroundColor: '#1a1a1a', padding: '1px', height: '42px', borderRadius: '0px', border: '1px solid #333', width: '150px' }}>
           <button onClick={() => changeDate(-1)} style={{ background: 'none', border: 'none', color: '#888', height: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <ChevronLeft size={20} />
           </button>
@@ -199,9 +201,9 @@ const HistoryView = () => {
             fontSize: '10px', 
             width: 'auto', 
             flexShrink: 0,
-            backgroundColor: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#222' : (sortBy === 'time' ? 'var(--didi-orange)' : '#1a1a1a'),
-            color: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#555' : (sortBy === 'time' ? 'white' : '#888'),
-            border: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '1px solid #333' : 'none'
+            backgroundColor: (shiftStatus === 'REST' || shiftStatus === 'CLOSED' || isPast) ? '#222' : (sortBy === 'time' ? 'var(--brand-purple)' : '#1a1a1a'),
+            color: (shiftStatus === 'REST' || shiftStatus === 'CLOSED' || isPast) ? '#555' : (sortBy === 'time' ? 'white' : '#888'),
+            border: (shiftStatus === 'REST' || shiftStatus === 'CLOSED' || isPast) ? '1px solid #333' : 'none'
           }}
         >
           ORDENAR
@@ -217,9 +219,9 @@ const HistoryView = () => {
               fontSize: '10px', 
               width: 'auto', 
               flexShrink: 0,
-              backgroundColor: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#1a1a1a' : (sortBy === key ? 'rgba(255,100,0,0.1)' : '#1a1a1a'),
-              color: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '#444' : (sortBy === key ? 'var(--didi-orange)' : '#888'),
-              border: (shiftStatus === 'REST' || shiftStatus === 'CLOSED') ? '1px dashed #333' : (sortBy === key ? '1px solid var(--didi-orange)' : '1px solid #333')
+              backgroundColor: (shiftStatus === 'REST' || shiftStatus === 'CLOSED' || isPast) ? '#1a1a1a' : (sortBy === key ? 'rgba(161,0,255,0.1)' : '#1a1a1a'),
+              color: (shiftStatus === 'REST' || shiftStatus === 'CLOSED' || isPast) ? '#444' : (sortBy === key ? 'var(--brand-purple)' : '#888'),
+              border: (shiftStatus === 'REST' || shiftStatus === 'CLOSED' || isPast) ? '1px dashed #333' : (sortBy === key ? '1px solid var(--brand-purple)' : '1px solid #333')
             }}
           >
             {key === 'roi' ? 'EFICIENCIA' : key === 'profit' ? 'GANANCIA' : key === 'distance' ? 'DISTANCIA' : 'DURACION'}
@@ -236,29 +238,29 @@ const HistoryView = () => {
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: '8px', 
-            height: '50px', 
-            fontSize: '14px', 
-            marginBottom: '10px',
-            backgroundColor: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#1a1a1a' : 'var(--didi-orange)',
-            color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#555' : 'white',
-            border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '1px dashed #333' : 'none',
-            pointerEvents: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 'none' : 'auto',
-            opacity: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 0.6 : 1
+            height: '42px', 
+            fontSize: '13px', 
+            marginBottom: '6px',
+            backgroundColor: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? '#1a1a1a' : 'var(--brand-purple)',
+            color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? '#555' : 'white',
+            border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? '1px dashed #333' : 'none',
+            pointerEvents: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? 'none' : 'auto',
+            opacity: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? 0.6 : 1
           }}
         >
           <Camera size={20} />
           Lector Mágico (Auditoría IA)
         </Link>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', opacity: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 0.6 : 1, pointerEvents: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? 'none' : 'auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', opacity: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? 0.6 : 1, pointerEvents: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? 'none' : 'auto', marginBottom: '8px' }}>
           <button 
             onClick={() => setPrivateMode(!privateMode)} 
             className="btn btn-secondary" 
             style={{ 
               padding: '8px', 
               fontSize: '11px', 
-              border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '1px dashed #333' : '1px solid #3498db', 
-              color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#555' : '#3498db' 
+              border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? '1px dashed #333' : '1px solid #3498db', 
+              color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? '#555' : '#3498db' 
             }}
           >
             {privateMode ? '✖️ Cancelar' : '➕ Viaje Privado'}
@@ -269,8 +271,8 @@ const HistoryView = () => {
             style={{ 
               padding: '8px', 
               fontSize: '11px', 
-              border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '1px dashed #333' : '1px solid #9b59b6', 
-              color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST') ? '#555' : '#9b59b6' 
+              border: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? '1px dashed #333' : '1px solid #9b59b6', 
+              color: (shiftStatus === 'CLOSED' || shiftStatus === 'REST' || isPast) ? '#555' : '#9b59b6' 
             }}
           >
             ➕ Mov. Personal
@@ -284,7 +286,7 @@ const HistoryView = () => {
       </div>
 
       {privateMode && (
-        <div className="card" style={{ marginBottom: '20px', border: '1px solid var(--didi-orange)', animation: 'slideDown 0.3s ease' }}>
+        <div className="card" style={{ marginBottom: '8px', border: '1px solid var(--brand-purple)', animation: 'slideDown 0.3s ease' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
             <div>
               <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>PAGO RECEIVED</label>
@@ -326,13 +328,13 @@ const HistoryView = () => {
             const isFatal = !isPrivate && !isPersonal && entry.calificacion_seleccion === 'Fatal';
             const isExpanded = expandedIds.includes(entry.id + (entry.tipo || ''));
 
-            const statusColor = isPersonal ? '#9b59b6' : (isPrivate ? '#3498db' : (isRecompensa ? 'var(--success-green)' : (isCancelacion ? 'var(--didi-orange)' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? 'var(--didi-orange)' : (isFatal ? 'var(--error-red)' : 'var(--success-green)')))))));
+            const statusColor = isPersonal ? '#9b59b6' : (isPrivate ? '#3498db' : (isRecompensa ? 'var(--success-green)' : (isCancelacion ? 'var(--brand-purple)' : (isGolden ? '#FFD700' : (isSuperElite ? '#00e5ff' : (isPobre ? '#ff8d00' : (isFatal ? 'var(--error-red)' : 'var(--success-green)')))))));
 
             return (
               <div key={entry.id + (entry.tipo || '')} onClick={() => toggleExpand(entry.id + (entry.tipo || ''))} className="card" style={{
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                padding: isExpanded ? '20px' : '15px'
+                padding: isExpanded ? '12px' : '8px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1px' }}>
                   <div style={{ width: '20%', textAlign: 'left' }}>

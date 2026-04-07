@@ -151,14 +151,14 @@ const Dashboard = () => {
             fontSize: '13px',
             width: '150px',
             height: '42px',
-            borderRadius: '21px',
+            borderRadius: '0px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: (isRestDay || isFuture) ? '#111' : (stats.shift_status === 'CLOSED' ? '#222' : (activeShift ? 'var(--didi-orange)' : 'var(--success-green)')),
-            color: (isRestDay || isFuture) ? '#444' : (stats.shift_status === 'CLOSED' ? '#666' : (activeShift ? '#fff' : '#000')),
+            backgroundColor: (isRestDay || isFuture || isPast) ? (isPast && activeShift ? 'var(--brand-purple)' : '#111') : (stats.shift_status === 'CLOSED' ? '#222' : (activeShift ? 'var(--brand-purple)' : 'var(--success-green)')),
+            color: (isRestDay || isFuture || isPast) ? (isPast && activeShift ? '#fff' : '#444') : (stats.shift_status === 'CLOSED' ? '#666' : (activeShift ? '#fff' : '#000')),
             fontWeight: '900',
-            border: (isRestDay || isFuture) ? '1px dashed #333' : 'none',
+            border: (isRestDay || isFuture || (isPast && !activeShift)) ? '1px dashed #333' : 'none',
             cursor: (isRestDay || isFuture || (stats.shift_status === 'CLOSED' && !activeShift)) ? 'not-allowed' : 'pointer',
             letterSpacing: '0.5px'
           }}
@@ -171,7 +171,7 @@ const Dashboard = () => {
           <div style={{ color: 'white', fontSize: '38px', fontWeight: '900', lineHeight: 1 }}>${currentDisposition.toFixed(0)}</div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', backgroundColor: '#1a1a1a', padding: '1px', height: '42px', borderRadius: '21px', border: '1px solid #333', width: '150px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', backgroundColor: '#1a1a1a', padding: '1px', height: '42px', borderRadius: '0px', border: '1px solid #333', width: '150px' }}>
           <button onClick={() => changeDate(-1)} style={{ background: 'none', border: 'none', color: '#888', height: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <ChevronLeft size={20} />
           </button>
@@ -212,13 +212,12 @@ const Dashboard = () => {
       ) : (
         <>
 
-      {/* 🧠 Consola de Rendimiento Maestro (ROI + Dinero Real) */}
       <div className="card" style={{ 
         display: 'grid', 
         gridTemplateColumns: '1fr 1fr', 
         alignItems: 'center', 
-        padding: '12px 10px',
-        marginBottom: '10px',
+        padding: '10px',
+        marginBottom: '6px',
         opacity: isFuture ? 0.3 : 1
       }}>
         <div style={{ textAlign: 'center', borderRight: '1px solid #222' }}>
@@ -245,17 +244,17 @@ const Dashboard = () => {
       </div>
 
       {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
-      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '8px', opacity: isFuture ? 0.3 : 1, padding: '12px' }}>
-        <div className="card-title" style={{ fontSize: '9px', textAlign: 'center', marginBottom: '4px' }}>KILÓMETROS TOTALES: {totalKmDidi.toFixed(1)}</div>
-        <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '4px' }}>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--didi-orange)' }} title="DiDi"></div>
+      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '6px', opacity: isFuture ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
+        <div className="card-title" style={{ fontSize: '9px', textAlign: 'center', marginBottom: '2px' }}>KILÓMETROS TOTALES: {totalKmDidi.toFixed(1)}</div>
+        <div style={{ display: 'flex', height: '10px', borderRadius: '0px', overflow: 'hidden', marginBottom: '4px' }}>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--brand-purple)' }} title="DiDi"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_personal / totalKmDidi) * 100 : 0}%`, backgroundColor: '#9b59b6' }} title="Personal"></div>
           <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '9px', color: 'var(--text-muted)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--didi-orange)' }}></div>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--brand-purple)' }}></div>
             <span>DIDI</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
@@ -273,8 +272,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: '0', opacity: isFuture ? 0.3 : 1, padding: '12px' }}>
-        <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '4px', overflow: 'hidden' }}>
+      <div className="card" style={{ marginTop: '0', opacity: isFuture ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
+        <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '0px', overflow: 'hidden' }}>
           <div style={{ 
             width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, 
             height: '100%', 
@@ -283,7 +282,7 @@ const Dashboard = () => {
             boxShadow: utilidadReal >= dailyGoal ? '0 0 10px var(--success-green)' : 'none'
           }}></div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             {isFuture
               ? 'Aún no se puede registrar progreso en el futuro.'
@@ -296,45 +295,45 @@ const Dashboard = () => {
       </div>
 
       {/* 🎭 La Auditoría Maestra Financiera */}
-      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Cascada Financiera de Rentabilidad</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px', marginBottom: '10px', opacity: isFuture ? 0.3 : 1 }}>
+      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Cascada Financiera de Rentabilidad</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '2px', marginBottom: '6px', opacity: isFuture ? 0.3 : 1 }}>
 
         {/* ROW 1: Espejismos y Bonos */}
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">TOTAL INGRESO (FICTICIO)</div>
           <div style={{ fontSize: '18px' }}>${ingresoBruto.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">INCENTIVOS Y BONOS</div>
           <div style={{ fontSize: '18px' }}>+${incentivos.toFixed(2)}</div>
         </div>
 
         {/* ROW 2: Liquidez Cruda (Lo que hay en la mano/cartera) */}
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">COBRADO EN EFECTIVO</div>
           <div style={{ fontSize: '16px' }}>${ingresoEfectivo.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">DEPÓSITO TARJETA</div>
           <div style={{ fontSize: '16px' }}>${ingresoTarjeta.toFixed(2)}</div>
         </div>
 
         {/* ROW 3: Evasiones y Costos Adheridos (Las "Mordidas" operativas) */}
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">TAJADA DE LA APP (DIDI)</div>
           <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi || 0).toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">IMPUESTOS DICTADOS</div>
           <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(impuestos || 0).toFixed(2)}</div>
         </div>
 
         {/* ⛽️ IMPACTO DE COMBUSTIBLE PROPORCIONAL */}
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">GASOLINA (NEGOCIO)</div>
           <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
         </div>
-        <div className="card" style={{ padding: '10px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
           <div className="card-title">GASOLINA PERSONAL</div>
           <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal).toFixed(2)}</div>
         </div>
