@@ -288,34 +288,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
-      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '6px', opacity: isFuture ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
-        <div className="card-title" style={{ fontSize: '9px', textAlign: 'center', marginBottom: '2px' }}>KILÓMETROS TOTALES: {totalKmDidi.toFixed(1)}</div>
-        <div style={{ display: 'flex', height: '10px', borderRadius: '0px', overflow: 'hidden', marginBottom: '4px' }}>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--brand-purple)' }} title="DiDi"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_personal / totalKmDidi) * 100 : 0}%`, backgroundColor: '#9b59b6' }} title="Personal"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '9px', color: 'var(--text-muted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--brand-purple)' }}></div>
-            <span>DIDI</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
-            <span>PRIV</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#9b59b6' }}></div>
-            <span>PERS</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
-            <span>MUERTOS</span>
-          </div>
-        </div>
-      </div>
 
       <div className="card" style={{ marginTop: '0', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
         <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '0px', overflow: 'hidden' }}>
@@ -384,6 +356,35 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
+      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '6px', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
+        <div className="card-title" style={{ fontSize: '9px', textAlign: 'center', marginBottom: '2px' }}>KILÓMETROS TOTALES: {totalKmDidi.toFixed(1)}</div>
+        <div style={{ display: 'flex', height: '10px', borderRadius: '0px', overflow: 'hidden', marginBottom: '4px' }}>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--brand-purple)' }} title="DiDi"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_personal / totalKmDidi) * 100 : 0}%`, backgroundColor: '#888' }} title="Personal"></div>
+          <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '9px', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--brand-purple)' }}></div>
+            <span>DIDI</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
+            <span>PRIV</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#888' }}></div>
+            <span>PERS</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
+            <span>MUERTOS</span>
+          </div>
+        </div>
+      </div>
+
       {/* 🗺️ RADAR TÁCTICO GPS (LUGAR PERFECTO) */}
       <div className="card" style={{ padding: '0', overflow: 'hidden', height: '220px', border: '1px solid #1a1a1a', position: 'relative' }}>
         <div style={{ 
@@ -411,7 +412,7 @@ const Dashboard = () => {
         >
           <TileLayer 
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" 
-            style={{ filter: 'grayscale(1) invert(1) opacity(0.5)' }} 
+            style={{ filter: 'grayscale(1) invert(1) opacity(0.7)' }} 
           />
           {gpsRoute.length > 0 && (
             <>
