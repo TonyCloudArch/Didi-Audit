@@ -220,8 +220,8 @@ const Dashboard = () => {
           <button onClick={() => changeDate(-1)} style={{ background: 'none', border: 'none', color: '#888', height: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <ChevronLeft size={20} />
           </button>
-          
-          <div 
+
+          <div
             onClick={() => dateInputRef.current && dateInputRef.current.showPicker()}
             style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 3, justifyContent: 'center', cursor: 'pointer' }}
           >
@@ -257,188 +257,173 @@ const Dashboard = () => {
       ) : (
         <>
 
-      <div className="card" style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        alignItems: 'center', 
-        padding: '10px',
-        marginBottom: '6px',
-        opacity: isFuture ? 0.3 : 1
-      }}>
-        <div style={{ textAlign: 'center', borderRight: '1px solid #222' }}>
-          <div className="card-title">EFICIENCIA</div>
-          <div style={{
-            fontSize: '24px',
-            fontWeight: '900',
-            color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)'))))
+          <div className="card" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            alignItems: 'center',
+            padding: '10px',
+            marginBottom: '6px',
+            opacity: isFuture ? 0.3 : 1
           }}>
-            ${roi.toFixed(2)}<span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '2px', fontWeight: 'normal' }}>/km</span>
-          </div>
-        </div>
-
-        <div style={{ textAlign: 'center' }}>
-          <div className="card-title">UTILIDAD REAL</div>
-          <div style={{
-            fontSize: '24px',
-            fontWeight: '900',
-            color: 'var(--success-green)'
-          }}>
-            ${(utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal)).toFixed(2)}
-          </div>
-        </div>
-      </div>
-
-
-      <div className="card" style={{ marginTop: '0', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
-        <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '0px', overflow: 'hidden' }}>
-          <div style={{ 
-            width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`, 
-            height: '100%', 
-            background: 'linear-gradient(90deg, #ffffff 0%, var(--success-green) 100%)', 
-            transition: 'width 0.5s ease',
-            boxShadow: utilidadReal >= dailyGoal ? '0 0 10px var(--success-green)' : 'none'
-          }}></div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {(date > new Date().toLocaleDateString('sv'))
-              ? 'Aún no se puede registrar progreso en el futuro.'
-              : utilidadReal >= dailyGoal
-                ? <span style={{ color: 'var(--success-green)' }}>✅ ¡META LOGRADA!</span>
-                : `Faltan $${(dailyGoal - (utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal))).toFixed(2)}`}
-          </div>
-          <div style={{ fontSize: '11px', color: utilidadReal >= dailyGoal ? 'var(--success-green)' : 'var(--text-muted)', opacity: 0.8 }}>META: ${dailyGoal} MXN</div>
-        </div>
-      </div>
-
-      {/* 🎭 La Auditoría Maestra Financiera */}
-      <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Cascada Financiera de Rentabilidad</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '2px', marginBottom: '6px', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1 }}>
-
-        {/* ROW 1: Espejismos y Bonos */}
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">TOTAL INGRESO (FICTICIO)</div>
-          <div style={{ fontSize: '18px' }}>${ingresoBruto.toFixed(2)}</div>
-        </div>
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">INCENTIVOS Y BONOS</div>
-          <div style={{ fontSize: '18px' }}>+${incentivos.toFixed(2)}</div>
-        </div>
-
-        {/* ROW 2: Liquidez Cruda (Lo que hay en la mano/cartera) */}
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">COBRADO EN EFECTIVO</div>
-          <div style={{ fontSize: '16px' }}>${ingresoEfectivo.toFixed(2)}</div>
-        </div>
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">DEPÓSITO TARJETA</div>
-          <div style={{ fontSize: '16px' }}>${ingresoTarjeta.toFixed(2)}</div>
-        </div>
-
-        {/* ROW 3: Evasiones y Costos Adheridos (Las "Mordidas" operativas) */}
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">TAJADA DE LA APP (DIDI)</div>
-          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi || 0).toFixed(2)}</div>
-        </div>
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">IMPUESTOS DICTADOS</div>
-          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(impuestos || 0).toFixed(2)}</div>
-        </div>
-
-        {/* ⛽️ IMPACTO DE COMBUSTIBLE PROPORCIONAL */}
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">GASOLINA (NEGOCIO)</div>
-          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
-        </div>
-        <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
-          <div className="card-title">GASOLINA PERSONAL</div>
-          <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal).toFixed(2)}</div>
-        </div>
-      </div>
-
-      {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
-      <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '6px', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
-        <div className="card-title" style={{ fontSize: '9px', textAlign: 'center', marginBottom: '2px' }}>KILÓMETROS TOTALES: {totalKmDidi.toFixed(1)}</div>
-        <div style={{ display: 'flex', height: '10px', borderRadius: '0px', overflow: 'hidden', marginBottom: '4px' }}>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--brand-purple)' }} title="DiDi"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_personal / totalKmDidi) * 100 : 0}%`, backgroundColor: '#888' }} title="Personal"></div>
-          <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '9px', color: 'var(--text-muted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--brand-purple)' }}></div>
-            <span>DIDI</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3498db' }}></div>
-            <span>PRIV</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#888' }}></div>
-            <span>PERS</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--error-red)' }}></div>
-            <span>MUERTOS</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 🗺️ RADAR TÁCTICO GPS (LUGAR PERFECTO) */}
-      <div className="card" style={{ padding: '0', overflow: 'hidden', height: '220px', border: '1px solid #1a1a1a', position: 'relative' }}>
-        <div style={{ 
-          position: 'absolute', 
-          top: '10px', 
-          left: '10px', 
-          zIndex: 1000, 
-          backgroundColor: 'rgba(0,0,0,0.85)', 
-          padding: '6px 10px', 
-          fontSize: '10px', 
-          fontWeight: '900', 
-          color: 'var(--brand-purple)',
-          borderLeft: '3px solid var(--brand-purple)',
-          letterSpacing: '1px'
-        }}>
-          {activeShift ? '🛰️ RASTREO EN VIVO' : '🛰️ ARCHIVO DE RUTA'}
-        </div>
-
-        <MapContainer 
-          center={[23.2329, -106.4062]} // Mazatlán Center
-          zoom={13} 
-          style={{ height: '100%', width: '100%', backgroundColor: '#000' }}
-          zoomControl={false}
-          attributionControl={false}
-        >
-          <TileLayer 
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" 
-            style={{ filter: 'grayscale(1) invert(1) opacity(0.7)' }} 
-          />
-          {gpsRoute.length > 0 && (
-            <>
-              <Polyline positions={gpsRoute} color="var(--brand-purple)" weight={4} opacity={0.8} />
-              <MapResizer points={gpsRoute} />
-              {lastPos && (
-                <Marker position={lastPos}></Marker>
-              )}
-            </>
-          )}
-          {gpsRoute.length === 0 && (
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 100, color: '#444', textAlign: 'center', fontSize: '10px', fontWeight: 'bold' }}>
-              SIN DATOS GPS DISPONIBLES<br />(ESPERANDO INICIO DE MOTOR)
+            <div style={{ textAlign: 'center', borderRight: '1px solid #222' }}>
+              <div className="card-title">EFICIENCIA</div>
+              <div style={{
+                fontSize: '24px',
+                fontWeight: '900',
+                color: isFuture ? '#444' : (roi >= 20 ? '#FFD700' : (roi >= 12 ? '#00e5ff' : (roi >= 8 ? 'var(--success-green)' : (roi >= 6 ? 'var(--didi-orange)' : 'var(--error-red)'))))
+              }}>
+                ${roi.toFixed(2)}<span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '2px', fontWeight: 'normal' }}>/km</span>
+              </div>
             </div>
-          )}
-        </MapContainer>
-      </div>
 
-      {/* Rest day control */}
-      {!isRestDay && !(date > new Date().toLocaleDateString('sv')) && stats.shift_status !== 'CLOSED' && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || (date < new Date().toLocaleDateString('sv')))) && (
-        <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
-          💤 Marcar como Día Descansado
-        </button>
+            <div style={{ textAlign: 'center' }}>
+              <div className="card-title">UTILIDAD REAL</div>
+              <div style={{
+                fontSize: '24px',
+                fontWeight: '900',
+                color: 'var(--success-green)'
+              }}>
+                ${(utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal)).toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+
+          <div className="card" style={{ marginTop: '0', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
+            <div style={{ width: '100%', height: '8px', backgroundColor: '#333', borderRadius: '0px', overflow: 'hidden' }}>
+              <div style={{
+                width: `${Math.min((utilidadReal / dailyGoal) * 100, 100)}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #ffffff 0%, var(--success-green) 100%)',
+                transition: 'width 0.5s ease',
+                boxShadow: utilidadReal >= dailyGoal ? '0 0 10px var(--success-green)' : 'none'
+              }}></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {(date > new Date().toLocaleDateString('sv'))
+                  ? 'Aún no se puede registrar progreso en el futuro.'
+                  : utilidadReal >= dailyGoal
+                    ? <span style={{ color: 'var(--success-green)' }}>✅ ¡META LOGRADA!</span>
+                    : `Faltan $${(dailyGoal - (utilidadReal - ((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal))).toFixed(2)}`}
+              </div>
+              <div style={{ fontSize: '11px', color: utilidadReal >= dailyGoal ? 'var(--success-green)' : 'var(--text-muted)', opacity: 0.8 }}>META: ${dailyGoal} MXN</div>
+            </div>
+          </div>
+
+          {/* 🎭 La Auditoría Maestra Financiera */}
+          <h3 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Cascada Financiera de Rentabilidad</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '2px', marginBottom: '6px', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1 }}>
+
+            {/* ROW 1: Espejismos y Bonos */}
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">TOTAL INGRESO (FICTICIO)</div>
+              <div style={{ fontSize: '18px' }}>${ingresoBruto.toFixed(2)}</div>
+            </div>
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">INCENTIVOS Y BONOS</div>
+              <div style={{ fontSize: '18px' }}>+${incentivos.toFixed(2)}</div>
+            </div>
+
+            {/* ROW 2: Liquidez Cruda (Lo que hay en la mano/cartera) */}
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">COBRADO EN EFECTIVO</div>
+              <div style={{ fontSize: '16px' }}>${ingresoEfectivo.toFixed(2)}</div>
+            </div>
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">DEPÓSITO TARJETA</div>
+              <div style={{ fontSize: '16px' }}>${ingresoTarjeta.toFixed(2)}</div>
+            </div>
+
+            {/* ROW 3: Evasiones y Costos Adheridos (Las "Mordidas" operativas) */}
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">TAJADA DE LA APP (DIDI)</div>
+              <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(cuotaDidi || 0).toFixed(2)}</div>
+            </div>
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">IMPUESTOS DICTADOS</div>
+              <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${Math.abs(impuestos || 0).toFixed(2)}</div>
+            </div>
+
+            {/* ⛽️ IMPACTO DE COMBUSTIBLE PROPORCIONAL */}
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">GASOLINA (NEGOCIO)</div>
+              <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${gastoGasolina.toFixed(2)}</div>
+            </div>
+            <div className="card" style={{ padding: '8px', textAlign: 'center', marginBottom: '0' }}>
+              <div className="card-title">GASOLINA PERSONAL</div>
+              <div style={{ fontSize: '18px', color: 'var(--error-red)' }}>-${((gastoGasolina / (totalKmDidi > 0 ? (totalKmDidi - km_personal) : 1)) * km_personal).toFixed(2)}</div>
+            </div>
+          </div>
+
+          {/* 🧭 Eficiencia Logística del Vehículo (Combustible quemado) */}
+          <div className="card" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '6px', opacity: (date > new Date().toLocaleDateString('sv')) ? 0.3 : 1, padding: '10px', marginBottom: '6px' }}>
+            <div className="card-title" style={{ fontSize: '9px', textAlign: 'center', marginBottom: '2px' }}>KILÓMETROS TOTALES: {totalKmDidi.toFixed(1)}</div>
+            <div style={{ display: 'flex', height: '10px', borderRadius: '0px', overflow: 'hidden', marginBottom: '4px' }}>
+              <div style={{ width: `${totalKmDidi > 0 ? (km_didi / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--brand-purple)' }} title="DiDi"></div>
+              <div style={{ width: `${totalKmDidi > 0 ? (km_privado / totalKmDidi) * 100 : 0}%`, backgroundColor: '#3498db' }} title="Privado"></div>
+              <div style={{ width: `${totalKmDidi > 0 ? (km_personal / totalKmDidi) * 100 : 0}%`, backgroundColor: '#888' }} title="Personal"></div>
+              <div style={{ width: `${totalKmDidi > 0 ? (km_muertos / totalKmDidi) * 100 : 0}%`, backgroundColor: 'var(--error-red)' }} title="Muertos"></div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '9px', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '0px', backgroundColor: 'var(--brand-purple)' }}></div>
+                <span>DIDI</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '0px', backgroundColor: '#3498db' }}></div>
+                <span>PRIV</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '0px', backgroundColor: '#888' }}></div>
+                <span>PERS</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '0px', backgroundColor: 'var(--error-red)' }}></div>
+                <span>MUERTOS</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 🗺️ RADAR TÁCTICO GPS (LUGAR PERFECTO) */}
+          <div className="card" style={{ padding: '0', overflow: 'hidden', height: '320px', border: '1px solid #1a1a1a', position: 'relative' }}>
+
+            <MapContainer
+              center={[23.2329, -106.4062]} // Mazatlán Center
+              zoom={13}
+              style={{ height: '100%', width: '100%', backgroundColor: '#000' }}
+              zoomControl={false}
+              attributionControl={false}
+            >
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                style={{ filter: 'grayscale(1) invert(1) opacity(0.7)' }}
+              />
+              {gpsRoute.length > 0 && (
+                <>
+                  <Polyline positions={gpsRoute} color="var(--brand-purple)" weight={4} opacity={0.8} />
+                  <MapResizer points={gpsRoute} />
+                  {lastPos && (
+                    <Marker position={lastPos}></Marker>
+                  )}
+                </>
+              )}
+              {gpsRoute.length === 0 && (
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 100, color: '#444', textAlign: 'center', fontSize: '10px', fontWeight: 'bold' }}>
+                  SIN DATOS GPS DISPONIBLES<br />(ESPERANDO INICIO DE MOTOR)
+                </div>
+              )}
+            </MapContainer>
+          </div>
+
+          {/* Rest day control */}
+          {!isRestDay && !(date > new Date().toLocaleDateString('sv')) && stats.shift_status !== 'CLOSED' && (ingresoBruto === 0 && gastoGasolina === 0 && (!activeShift || (date < new Date().toLocaleDateString('sv')))) && (
+            <button className="btn" style={{ marginTop: '10px', width: '100%', borderColor: '#444', backgroundColor: 'transparent', color: '#888', borderStyle: 'dashed' }} onClick={() => setShowRestDayModal(true)}>
+              💤 Marcar como Día Descansado
+            </button>
+          )}
+        </>
       )}
-    </>
-  )}
 
       {showShiftModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -502,9 +487,9 @@ const Dashboard = () => {
           <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <h3 style={{ fontSize: '14px', textAlign: 'center' }}>SINCRONIZAR AVANCE REAL</h3>
             <p style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>Escribe tu odómetro actual para calcular tu ROI real en este momento.</p>
-            <input 
-              type="number" 
-              value={syncOdo} 
+            <input
+              type="number"
+              value={syncOdo}
               onChange={e => setSyncOdo(e.target.value)}
               placeholder="Ej: 195750"
               autoFocus

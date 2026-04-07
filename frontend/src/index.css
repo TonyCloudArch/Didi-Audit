@@ -68,7 +68,7 @@ body {
   border: 1px solid #1a1a1a;
   padding: 16px;
   margin-bottom: 6px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .card-title {
@@ -121,8 +121,13 @@ body {
 }
 
 /* 🚦 Traffic Light */
-.indicator-green { color: var(--success-green); }
-.indicator-red { color: var(--error-red); }
+.indicator-green {
+  color: var(--success-green);
+}
+
+.indicator-red {
+  color: var(--error-red);
+}
 
 /* 🧭 Navigation Bar */
 .bottom-nav {

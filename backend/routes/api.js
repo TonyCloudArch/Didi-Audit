@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const db = require('../config/db');
+const traccarDb = require('../config/traccarDb');
 const { parseDidiReport, parseFuelReceipt } = require('../services/ai');
 
 // 🛡️ Mazatlán Time Helper (GMT-7)
@@ -655,21 +656,39 @@ router.get('/gps/route', async (req, res) => {
       ? new Date(shift.end_time).toISOString().slice(0, 19).replace('T', ' ')
       : new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    // 🗺️ 2. TODO: Conectar con la DB de Traccar aquí
-    // Por ahora, generamos un rastro simulado en Mazatlán para probar el Radar Púrpura
-    const mockRoute = [
+    // 🗺️ 2. Intentar consulta REAL a Traccar
+    let route = [];
+    const deviceId = process.env.TRACCAR_DEVICE_ID || 1;
+
+    try {
+      const [pos] = await traccarDb.execute(
+        'SELECT latitude, longitude FROM tc_positions WHERE deviceid = ? AND servertime BETWEEN ? AND ? ORDER BY servertime ASC',
+        [deviceId, startTime, endTime]
+      );
+
+      if (pos.length > 0) {
+        route = pos.map(p => [Number(p.latitude), Number(p.longitude)]);
+      }
+    } catch (e) {
+      console.warn("Traccar DB connection failed or empty, using mock.");
+    }
+
+    // 🗺️ 3. Respaldo (Mock) si no hay datos reales
+    if (route.length === 0) {
+      route = [
         [23.2329, -106.4062],
         [23.2350, -106.4080],
         [23.2380, -106.4100],
         [23.2400, -106.4150],
         [23.2420, -106.4120],
         [23.2450, -106.4180]
-    ];
+      ];
+    }
     
     res.json({
       success: true,
-      route: mockRoute,
-      lastPos: mockRoute[mockRoute.length - 1],
+      route: route,
+      lastPos: route[route.length - 1],
       startTime,
       endTime
     });
