@@ -19,6 +19,10 @@ const HistoryView = () => {
   const [privEntry, setPrivEntry] = useState({ pago: '', distancia: '', descripcion: '' });
 
   const [sortBy, setSortBy] = useState('time'); // time, roi, distance, profit
+  const [activeShift, setActiveShift] = useState(null);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncOdo, setSyncOdo] = useState('');
+  const [shiftData, setShiftData] = useState(null);
 
   const changeDate = (offset) => {
     const d = new Date(date + 'T12:00:00');
@@ -69,6 +73,7 @@ const HistoryView = () => {
 
         setEntries(allEntries);
         setShiftStatus(data.shiftStatus);
+        setShiftData(data.shiftData);
       }
     } catch (e) {
       console.error(e);
@@ -76,8 +81,15 @@ const HistoryView = () => {
     setLoading(false);
   };
 
+  const checkShift = () => {
+    fetch('http://localhost:3001/api/shifts/active')
+      .then(r => r.json())
+      .then(d => { if (d.success) setActiveShift(d.activeShift); });
+  };
+
   useEffect(() => {
     fetchHistory();
+    checkShift();
     if (date) {
       localStorage.setItem('shared_audit_date', date); // 🏁 Sincronizar de vuelta al Dashboard
     }
@@ -128,29 +140,53 @@ const HistoryView = () => {
     }
   };
 
-  const totalIncomeAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'privado' ? curr.pago : (curr.tipo === 'personal' ? 0 : curr.ganancias_desp_imp)), 0);
-  const totalKmAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'personal' ? 0 : curr.distancia), 0);
-  const avgEfficiencyAll = totalKmAll > 0 ? (totalIncomeAll / totalKmAll) : 0;
+  const totalIncomeAll = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'privado' ? curr.pago : (curr.tipo === 'personal' ? 0 : curr.tus_ganancias)), 0);
+  const totalKmProductive = entries.reduce((acc, curr) => acc + parseFloat(curr.tipo === 'personal' || curr.tipo === 'recompensa' ? 0 : curr.distancia), 0);
+  const avgEfficiencyAll = totalKmProductive > 0 ? (totalIncomeAll / totalKmProductive) : 0;
+
+  const handleSyncOdometer = async () => {
+    if (!syncOdo || !activeShift) return;
+    const response = await fetch('http://localhost:3001/api/shifts/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shift_id: activeShift.id, current_odometer: Number(syncOdo) })
+    });
+    if (response.ok) {
+      setShowSyncModal(false);
+      setSyncOdo('');
+      fetchHistory();
+    } else {
+      alert("Error al sincronizar");
+    }
+  };
 
   return (
     <div className="mobile-container">
       <div className="header" style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', alignItems: 'center', padding: '15px', borderBottom: '1px solid #222', gap: '5px' }}>
-        <div style={{
-          fontSize: '13px',
-          width: '150px',
-          height: '42px',
-          borderRadius: '0px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#111',
-          color: '#888',
-          fontWeight: '900',
-          border: '1px solid #333',
-          letterSpacing: '0.5px'
-        }}>
-          VIAJES
-        </div>
+        <button
+          onClick={() => activeShift && setShowSyncModal(true)}
+          style={{
+            fontSize: '11px',
+            width: '150px',
+            height: '42px',
+            borderRadius: '0px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: activeShift ? 'var(--brand-purple)' : '#111',
+            color: activeShift ? '#fff' : '#444',
+            fontWeight: '900',
+            border: activeShift ? 'none' : '1px solid #333',
+            cursor: activeShift ? 'pointer' : 'not-allowed',
+            padding: '2px',
+            letterSpacing: '0.5px'
+          }}
+          disabled={!activeShift}
+        >
+          <div style={{ fontSize: '7px', opacity: 0.8, marginBottom: '2px' }}>SINCRONIZAR</div>
+          ODÓMETRO
+        </button>
 
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ 
@@ -482,6 +518,27 @@ const HistoryView = () => {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button className="btn btn-secondary" onClick={() => setShowPersonalModal(false)} style={{ flex: 1 }}>Cerrar</button>
               <button className="btn" onClick={handleRegisterPersonal} style={{ flex: 1, backgroundColor: '#9b59b6', color: 'white' }}>Guardar Movimiento</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ⚡ Modal Sincronizar Odómetro (En Vivo) */}
+      {showSyncModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <h3 style={{ fontSize: '14px', textAlign: 'center' }}>SINCRONIZAR AVANCE REAL</h3>
+            <p style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>Escribe tu odómetro actual para calcular tu ROI real en este momento.</p>
+            <input
+              type="number"
+              value={syncOdo}
+              onChange={e => setSyncOdo(e.target.value)}
+              placeholder="Ej: 195750"
+              autoFocus
+              style={{ width: '100%', padding: '12px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', fontSize: '18px', textAlign: 'center' }}
+            />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowSyncModal(false)} style={{ flex: 1 }}>Cerrar</button>
+              <button className="btn btn-primary" onClick={handleSyncOdometer} style={{ flex: 1 }}>Actualizar IQ</button>
             </div>
           </div>
         </div>

@@ -38,8 +38,6 @@ const Dashboard = () => {
   const [denoms, setDenoms] = useState({ m1: 0, m2: 0, m5: 0, m10: 0, b20: 0, b50: 0, b100: 0, b200: 0, b500: 0 });
   const dailyGoal = 500.00;
   const [showRestDayModal, setShowRestDayModal] = useState(false);
-  const [showSyncModal, setShowSyncModal] = useState(false);
-  const [syncOdo, setSyncOdo] = useState('');
   const [gpsRoute, setGpsRoute] = useState([]); // [[lat, lng], ...]
   const [lastPos, setLastPos] = useState(null);
 
@@ -144,21 +142,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleSyncOdometer = async () => {
-    if (!syncOdo || !activeShift) return;
-    const response = await fetch('http://localhost:3001/api/shifts/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shift_id: activeShift.id, current_odometer: Number(syncOdo) })
-    });
-    if (response.ok) {
-      setShowSyncModal(false);
-      setSyncOdo('');
-      fetchDashboardData();
-    } else {
-      alert("Error al sincronizar");
-    }
-  };
 
   const handleMarkRestDayConfirm = async () => {
     try {
@@ -477,27 +460,6 @@ const Dashboard = () => {
             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
               <button className="btn btn-secondary" onClick={() => setShowRestDayModal(false)} style={{ flex: 1 }}>Cancelar</button>
               <button className="btn" onClick={handleMarkRestDayConfirm} style={{ flex: 1, backgroundColor: '#3498db', color: 'white', fontWeight: 'bold' }}>Sí, aplicar descanso</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ⚡ Modal Sincronizar Odómetro (En Vivo) */}
-      {showSyncModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <h3 style={{ fontSize: '14px', textAlign: 'center' }}>SINCRONIZAR AVANCE REAL</h3>
-            <p style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>Escribe tu odómetro actual para calcular tu ROI real en este momento.</p>
-            <input
-              type="number"
-              value={syncOdo}
-              onChange={e => setSyncOdo(e.target.value)}
-              placeholder="Ej: 195750"
-              autoFocus
-              style={{ width: '100%', padding: '12px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', fontSize: '18px', textAlign: 'center' }}
-            />
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn btn-secondary" onClick={() => setShowSyncModal(false)} style={{ flex: 1 }}>Cerrar</button>
-              <button className="btn btn-primary" onClick={handleSyncOdometer} style={{ flex: 1 }}>Actualizar IQ</button>
             </div>
           </div>
         </div>
